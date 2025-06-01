@@ -183,6 +183,16 @@ using (var scope = app.Services.CreateScope())
                     context.SaveChanges();
                     scopeLogger.LogInformation("Initial data seeded successfully");
                 }
+                else
+                {
+                    scopeLogger.LogInformation("Database already contains data, skipping seeding");
+                }
+
+                // Verify data after seeding
+                var finalCategoryCount = context.Categories.Count();
+                var finalItemCount = context.Items.Count();
+                scopeLogger.LogInformation("Final database state - Categories: {CategoryCount}, Items: {ItemCount}", 
+                    finalCategoryCount, finalItemCount);
             }
         }
         catch (Exception ex)
