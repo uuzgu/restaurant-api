@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using RestaurantApi.Data;
+using RestaurantApi.Models;
 using RestaurantApi.Services;
 using System.Text.Json.Serialization;
 
@@ -127,7 +128,7 @@ using (var scope = app.Services.CreateScope())
             // If migrations fail, we'll continue with the existing database
         }
         
-        // Verify database connection
+        // Verify database connection and seed data
         try
         {
             var canConnect = context.Database.CanConnect();
@@ -135,13 +136,58 @@ using (var scope = app.Services.CreateScope())
             
             if (canConnect)
             {
+                // Check if we need to seed data
                 var categoryCount = context.Categories.Count();
                 scopeLogger.LogInformation("Found {Count} categories in the database", categoryCount);
+
+                if (categoryCount == 0)
+                {
+                    scopeLogger.LogInformation("Seeding initial data");
+                    // Seed categories
+                    context.Categories.AddRange(
+                        new Category { Id = -1, Name = "Promotions" },
+                        new Category { Id = -2, Name = "Pizza" },
+                        new Category { Id = -3, Name = "Bowl" },
+                        new Category { Id = -4, Name = "Cheeseburger" },
+                        new Category { Id = -5, Name = "Salad" },
+                        new Category { Id = -6, Name = "Breakfast" },
+                        new Category { Id = -7, Name = "Drinks" },
+                        new Category { Id = -8, Name = "Soup" },
+                        new Category { Id = -9, Name = "Dessert" }
+                    );
+
+                    // Seed items
+                    context.Items.AddRange(
+                        new Item
+                        {
+                            Id = -1,
+                            Name = "Special Combo",
+                            Description = "Get a pizza and drink at a special price!",
+                            Price = 15.99m,
+                            CategoryId = -1,
+                            ImageUrl = "/images/categories/promotionsCategory.png"
+                        },
+                        new Item
+                        {
+                            Id = -2,
+                            Name = "Family Bundle",
+                            Description = "Perfect for the whole family - 2 pizzas and 4 drinks",
+                            Price = 29.99m,
+                            CategoryId = -1,
+                            ImageUrl = "/images/categories/promotionsCategory.png"
+                        },
+                        new Item { Id = 1, CategoryId = -7, Name = "Cola", Description = "Classic carbonated soft drink", Price = 4 },
+                        new Item { Id = 2, CategoryId = -5, Name = "Salad", Description = "Salad with fresh vegetables and cheese", ImageUrl = "https://restaurant-images33.s3.eu-north-1.amazonaws.com/salad.jpg", Price = 8 }
+                    );
+
+                    context.SaveChanges();
+                    scopeLogger.LogInformation("Initial data seeded successfully");
+                }
             }
         }
         catch (Exception ex)
         {
-            scopeLogger.LogError(ex, "Database connection test failed");
+            scopeLogger.LogError(ex, "Database connection test or seeding failed");
         }
     }
     catch (Exception ex)
