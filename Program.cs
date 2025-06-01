@@ -21,7 +21,8 @@ builder.Services.AddCors(options =>
         builder.WithOrigins(
                 "http://localhost:3000",
                 "https://restaurant-ui.vercel.app",
-                "https://restaurant-ui-gules.vercel.app"
+                "https://restaurant-ui-gules.vercel.app",
+                "https://restaurant-ui-git-main-utkus-projects-cabada99.vercel.app"
             )
             .AllowAnyMethod()
             .AllowAnyHeader()
@@ -114,6 +115,9 @@ app.MapControllerRoute(
 app.MapControllerRoute(
     name: "api",
     pattern: "api/{controller}/{action=Index}/{id?}");
+
+// Comment out MapControllers since we're using explicit routing
+// app.MapControllers();
 
 // Log the application startup
 logger.LogInformation("Application started. Environment: {Environment}", 
