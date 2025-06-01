@@ -210,18 +210,15 @@ namespace RestaurantApi.Data
                 entity.Property(e => e.LastName).HasColumnName("last_name").IsRequired();
                 entity.Property(e => e.Email).HasColumnName("email").IsRequired();
                 entity.Property(e => e.Phone).HasColumnName("phone");
+                entity.Property(e => e.PostalCode).HasColumnName("postal_code");
+                entity.Property(e => e.Street).HasColumnName("street");
+                entity.Property(e => e.House).HasColumnName("house");
+                entity.Property(e => e.Stairs).HasColumnName("stairs");
+                entity.Property(e => e.Stick).HasColumnName("stick");
+                entity.Property(e => e.Door).HasColumnName("door");
+                entity.Property(e => e.Bell).HasColumnName("bell");
                 entity.Property(e => e.Comment).HasColumnName("comment");
-                entity.Property(e => e.CreateDate).HasColumnName("create_date").HasDefaultValueSql("CURRENT_TIMESTAMP");
-                entity.OwnsOne(e => e.Address, a =>
-                {
-                    a.Property(p => p.PostalCode).HasColumnName("postal_code");
-                    a.Property(p => p.Street).HasColumnName("street");
-                    a.Property(p => p.House).HasColumnName("house");
-                    a.Property(p => p.Stairs).HasColumnName("stairs");
-                    a.Property(p => p.Stick).HasColumnName("stick");
-                    a.Property(p => p.Door).HasColumnName("door");
-                    a.Property(p => p.Bell).HasColumnName("bell");
-                });
+                entity.Property(e => e.CreateDate).HasColumnName("create_date");
             });
 
             // Seed Offers
