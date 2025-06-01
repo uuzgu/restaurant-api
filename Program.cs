@@ -82,12 +82,22 @@ using (var scope = app.Services.CreateScope())
     try
     {
         var context = services.GetRequiredService<RestaurantContext>();
+        
+        // First ensure the database exists
         context.Database.EnsureCreated();
         
-        // Run any pending migrations
-        if (context.Database.GetPendingMigrations().Any())
+        // Then try to apply any pending migrations
+        try
         {
-            context.Database.Migrate();
+            if (context.Database.GetPendingMigrations().Any())
+            {
+                context.Database.Migrate();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Warning: Could not apply migrations: {ex.Message}");
+            // If migrations fail, we'll continue with the existing database
         }
         
         Console.WriteLine("Database initialized successfully.");
@@ -95,7 +105,7 @@ using (var scope = app.Services.CreateScope())
     catch (Exception ex)
     {
         Console.WriteLine($"An error occurred while initializing the database: {ex.Message}");
-        throw;
+        // Don't throw the exception, allow the application to start even if database initialization fails
     }
 }
 

@@ -11,7 +11,6 @@ namespace RestaurantApi.Data
 
         public DbSet<Item> Items { get; set; }
         public DbSet<ItemIngredient> ItemIngredients { get; set; }
-        public DbSet<User> Users { get; set; }
         public DbSet<Category> Categories { get; set; }
         public DbSet<Offer> Offers { get; set; }
         public DbSet<ItemOffer> ItemOffers { get; set; }
@@ -52,7 +51,6 @@ namespace RestaurantApi.Data
                 entity.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
                 entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").IsRequired();
                 entity.Property(e => e.PaymentMethod).HasColumnName("payment_method").IsRequired();
-                entity.Property(e => e.UserId).HasColumnName("user_id");
             });
 
             // Configure OrderDetails entity
@@ -180,25 +178,6 @@ namespace RestaurantApi.Data
                     .WithMany(o => o.ItemOffers)
                     .HasForeignKey(e => e.OfferId)
                     .OnDelete(DeleteBehavior.Cascade);
-            });
-
-            // Configure User entity
-            modelBuilder.Entity<User>(entity =>
-            {
-                entity.ToTable("users");
-                entity.HasKey(e => e.Id).HasName("Id");
-                entity.Property(e => e.Email).HasColumnName("Email").IsRequired();
-                entity.Property(e => e.Password).HasColumnName("Password").IsRequired();
-                entity.Property(e => e.FirstName).HasColumnName("FirstName").IsRequired();
-                entity.Property(e => e.LastName).HasColumnName("LastName").IsRequired();
-                entity.Property(e => e.Phone).HasColumnName("Phone");
-                entity.Property(e => e.Address).HasColumnName("Address");
-                entity.Property(e => e.PostalCode).HasColumnName("PostalCode");
-                entity.Property(e => e.House).HasColumnName("House");
-                entity.Property(e => e.Door).HasColumnName("Door");
-                entity.Property(e => e.Stairs).HasColumnName("Stairs");
-                entity.Property(e => e.Bell).HasColumnName("Bell");
-                entity.Property(e => e.Comment).HasColumnName("Comment");
             });
 
             // Configure CustomerOrderInfo entity

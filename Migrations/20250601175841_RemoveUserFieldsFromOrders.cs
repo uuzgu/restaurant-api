@@ -5,19 +5,24 @@
 namespace RestaurantApi.Migrations
 {
     /// <inheritdoc />
-    public partial class DropPromotionItemsTable : Migration
+    public partial class RemoveUserFieldsFromOrders : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(
-                name: "promotion_items");
+            migrationBuilder.DropForeignKey(
+                name: "FK_orders_users_user_id",
+                table: "orders");
+
+            migrationBuilder.DropColumn(
+                name: "user_id",
+                table: "orders");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            // No need to recreate the table in Down() since we're removing it permanently
+
         }
     }
 }

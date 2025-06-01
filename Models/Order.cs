@@ -28,9 +28,6 @@ namespace RestaurantApi.Models
         [Column("special_notes")]
         public string? SpecialNotes { get; set; }
 
-        [Column("user_id")]
-        public int? UserId { get; set; }
-
         [Column("customer_info_id")]
         public int? CustomerInfoId { get; set; }
 
@@ -44,7 +41,6 @@ namespace RestaurantApi.Models
         public string? StripeSessionId { get; set; }
 
         // Navigation properties
-        public User? User { get; set; }
         public CustomerOrderInfo? CustomerInfo { get; set; }
         public OrderDetails? OrderDetails { get; set; }
     }

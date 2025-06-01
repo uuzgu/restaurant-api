@@ -29,16 +29,6 @@ namespace RestaurantApi.Services
                 .FirstOrDefaultAsync(o => o.OrderNumber == orderNumber);
         }
 
-        public async Task<List<Order>> GetOrdersByUserId(int userId)
-        {
-            return await _context.Orders
-                .Include(o => o.CustomerInfo)
-                .Include(o => o.OrderDetails)
-                .Where(o => o.UserId == userId)
-                .OrderByDescending(o => o.CreatedAt)
-                .ToListAsync();
-        }
-
         public async Task<Order> CreateOrder(Order order)
         {
             _context.Orders.Add(order);
@@ -86,43 +76,14 @@ namespace RestaurantApi.Services
                     Phone = customerInfo.Phone,
                     Comment = customerInfo.Comment,
                     CreateDate = DateTime.UtcNow,
-                    Address = new Address
-                    {
-                        PostalCode = customerInfo.Address?.PostalCode,
-                        Street = customerInfo.Address?.Street,
-                        House = customerInfo.Address?.House,
-                        Stairs = customerInfo.Address?.Stairs,
-                        Door = customerInfo.Address?.Door,
-                        Bell = customerInfo.Address?.Bell
-                    }
+                    PostalCode = customerInfo.PostalCode,
+                    Street = customerInfo.Street,
+                    House = customerInfo.House,
+                    Stairs = customerInfo.Stairs,
+                    Door = customerInfo.Door,
+                    Bell = customerInfo.Bell
                 }
             };
-
-            if (customerInfo != null)
-            {
-                var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == customerInfo.Email);
-                if (user == null)
-                {
-                    user = new User
-                    {
-                        FirstName = customerInfo.FirstName,
-                        LastName = customerInfo.LastName,
-                        Email = customerInfo.Email,
-                        Password = Guid.NewGuid().ToString(),
-                        Phone = customerInfo.Phone,
-                        PostalCode = customerInfo.Address?.PostalCode,
-                        Address = customerInfo.Address?.Street,
-                        House = customerInfo.Address?.House,
-                        Stairs = customerInfo.Address?.Stairs,
-                        Door = customerInfo.Address?.Door,
-                        Bell = customerInfo.Address?.Bell,
-                        Comment = customerInfo.Comment
-                    };
-                    _context.Users.Add(user);
-                    await _context.SaveChangesAsync();
-                }
-                order.UserId = user.Id;
-            }
 
             _context.Orders.Add(order);
             await _context.SaveChangesAsync();

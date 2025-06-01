@@ -11,8 +11,8 @@ using RestaurantApi.Data;
 namespace RestaurantApi.Migrations
 {
     [DbContext(typeof(RestaurantContext))]
-    [Migration("20250518115720_AddPostcodeAddresses")]
-    partial class AddPostcodeAddresses
+    [Migration("20250601175841_RemoveUserFieldsFromOrders")]
+    partial class RemoveUserFieldsFromOrders
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -108,17 +108,170 @@ namespace RestaurantApi.Migrations
                     b.ToTable("category_selection_groups", (string)null);
                 });
 
-            modelBuilder.Entity("RestaurantApi.Models.CustomerInfo", b =>
+            modelBuilder.Entity("RestaurantApi.Models.Coupon", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedAt")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("created_at");
+
+                    b.Property<decimal>("DiscountRatio")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("discount_ratio");
+
+                    b.Property<string>("Email")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EndDate")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("end_date");
+
+                    b.Property<int>("IsPeriodic")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("is_periodic");
+
+                    b.Property<int>("IsUsed")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("is_used");
+
+                    b.Property<string>("StartDate")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("start_date");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Coupons");
+                });
+
+            modelBuilder.Entity("RestaurantApi.Models.CouponHistory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("CouponId")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("coupon_id");
+
+                    b.Property<string>("Email")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UsedAt")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("used_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CouponId");
+
+                    b.ToTable("coupons_history");
+                });
+
+            modelBuilder.Entity("RestaurantApi.Models.CouponSchedule", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("BeginTime")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("begin_time");
+
+                    b.Property<int>("CouponId")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("coupon_id");
+
+                    b.Property<string>("CreatedAt")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("EndTime")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("end_time");
+
+                    b.Property<int>("Friday")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("friday");
+
+                    b.Property<int>("Monday")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("monday");
+
+                    b.Property<int>("Saturday")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("saturday");
+
+                    b.Property<int>("Sunday")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("sunday");
+
+                    b.Property<int>("Thursday")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("thursday");
+
+                    b.Property<int>("Tuesday")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("tuesday");
+
+                    b.Property<string>("UpdatedAt")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int>("Wednesday")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("wednesday");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CouponId")
+                        .IsUnique();
+
+                    b.ToTable("coupon_schedule");
+                });
+
+            modelBuilder.Entity("RestaurantApi.Models.CustomerOrderInfo", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER")
+                        .HasColumnName("Id")
                         .HasAnnotation("Relational:JsonPropertyName", "id");
+
+                    b.Property<string>("Bell")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("bell")
+                        .HasAnnotation("Relational:JsonPropertyName", "bell");
 
                     b.Property<string>("Comment")
                         .HasColumnType("TEXT")
                         .HasColumnName("comment")
                         .HasAnnotation("Relational:JsonPropertyName", "comment");
+
+                    b.Property<DateTime>("CreateDate")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("create_date")
+                        .HasAnnotation("Relational:JsonPropertyName", "createDate");
+
+                    b.Property<string>("Door")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("door")
+                        .HasAnnotation("Relational:JsonPropertyName", "door");
 
                     b.Property<string>("Email")
                         .IsRequired()
@@ -132,6 +285,11 @@ namespace RestaurantApi.Migrations
                         .HasColumnName("first_name")
                         .HasAnnotation("Relational:JsonPropertyName", "firstName");
 
+                    b.Property<string>("House")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("house")
+                        .HasAnnotation("Relational:JsonPropertyName", "house");
+
                     b.Property<string>("LastName")
                         .IsRequired()
                         .HasColumnType("TEXT")
@@ -143,10 +301,30 @@ namespace RestaurantApi.Migrations
                         .HasColumnName("phone")
                         .HasAnnotation("Relational:JsonPropertyName", "phone");
 
+                    b.Property<string>("PostalCode")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("postal_code")
+                        .HasAnnotation("Relational:JsonPropertyName", "postalCode");
+
+                    b.Property<string>("Stairs")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("stairs")
+                        .HasAnnotation("Relational:JsonPropertyName", "stairs");
+
+                    b.Property<string>("Stick")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("stick")
+                        .HasAnnotation("Relational:JsonPropertyName", "stick");
+
+                    b.Property<string>("Street")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("street")
+                        .HasAnnotation("Relational:JsonPropertyName", "street");
+
                     b.HasKey("Id")
                         .HasName("id");
 
-                    b.ToTable("customer_info", (string)null);
+                    b.ToTable("customerOrder_info", (string)null);
                 });
 
             modelBuilder.Entity("RestaurantApi.Models.DeliveryAddress", b =>
@@ -702,7 +880,6 @@ namespace RestaurantApi.Migrations
                         .HasColumnName("status");
 
                     b.Property<string>("StripeSessionId")
-                        .IsRequired()
                         .HasColumnType("TEXT")
                         .HasColumnName("stripe_session_id");
 
@@ -715,52 +892,37 @@ namespace RestaurantApi.Migrations
                         .HasColumnType("TEXT")
                         .HasColumnName("updated_at");
 
-                    b.Property<int?>("UserId")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("user_id");
-
                     b.HasKey("Id")
                         .HasName("id");
 
                     b.HasIndex("CustomerInfoId");
 
-                    b.HasIndex("UserId");
-
                     b.ToTable("orders", (string)null);
                 });
 
-            modelBuilder.Entity("RestaurantApi.Models.OrderLineItem", b =>
+            modelBuilder.Entity("RestaurantApi.Models.OrderDetails", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER")
                         .HasColumnName("id");
 
-                    b.Property<int>("ItemId")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("item_id");
+                    b.Property<string>("ItemDetails")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("item_details");
 
                     b.Property<int>("OrderId")
                         .HasColumnType("INTEGER")
                         .HasColumnName("order_id");
 
-                    b.Property<string>("Price")
-                        .IsRequired()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("price");
-
-                    b.Property<int>("Quantity")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("quantity");
-
                     b.HasKey("Id")
                         .HasName("id");
 
-                    b.HasIndex("ItemId");
+                    b.HasIndex("OrderId")
+                        .IsUnique();
 
-                    b.HasIndex("OrderId");
-
-                    b.ToTable("order_items", (string)null);
+                    b.ToTable("order_details", (string)null);
                 });
 
             modelBuilder.Entity("RestaurantApi.Models.Postcode", b =>
@@ -782,6 +944,26 @@ namespace RestaurantApi.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("postcodes", (string)null);
+                });
+
+            modelBuilder.Entity("RestaurantApi.Models.PostcodeMinimumOrder", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("MinimumOrderValue")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("MinimumOrderValue");
+
+                    b.Property<string>("Postcode")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("Postcode");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PostcodeMinimumOrders", (string)null);
                 });
 
             modelBuilder.Entity("RestaurantApi.Models.Promotion", b =>
@@ -911,70 +1093,6 @@ namespace RestaurantApi.Migrations
                     b.ToTable("selection_options", (string)null);
                 });
 
-            modelBuilder.Entity("RestaurantApi.Models.User", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Address")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("Address");
-
-                    b.Property<string>("Bell")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("Bell");
-
-                    b.Property<string>("Comment")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("Comment");
-
-                    b.Property<string>("Door")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("Door");
-
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("Email");
-
-                    b.Property<string>("FirstName")
-                        .IsRequired()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("FirstName");
-
-                    b.Property<string>("House")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("House");
-
-                    b.Property<string>("LastName")
-                        .IsRequired()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("LastName");
-
-                    b.Property<string>("Password")
-                        .IsRequired()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("Password");
-
-                    b.Property<string>("Phone")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("Phone");
-
-                    b.Property<string>("PostalCode")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("PostalCode");
-
-                    b.Property<string>("Stairs")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("Stairs");
-
-                    b.HasKey("Id")
-                        .HasName("Id");
-
-                    b.ToTable("users", (string)null);
-                });
-
             modelBuilder.Entity("RestaurantApi.Models.CategorySelectionGroup", b =>
                 {
                     b.HasOne("RestaurantApi.Models.Category", "Category")
@@ -994,59 +1112,26 @@ namespace RestaurantApi.Migrations
                     b.Navigation("SelectionGroup");
                 });
 
-            modelBuilder.Entity("RestaurantApi.Models.CustomerInfo", b =>
+            modelBuilder.Entity("RestaurantApi.Models.CouponHistory", b =>
                 {
-                    b.OwnsOne("RestaurantApi.Models.Address", "Address", b1 =>
-                        {
-                            b1.Property<int>("CustomerInfoId")
-                                .HasColumnType("INTEGER");
+                    b.HasOne("RestaurantApi.Models.Coupon", "Coupon")
+                        .WithMany()
+                        .HasForeignKey("CouponId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
-                            b1.Property<string>("Bell")
-                                .HasColumnType("TEXT")
-                                .HasColumnName("bell")
-                                .HasAnnotation("Relational:JsonPropertyName", "bell");
+                    b.Navigation("Coupon");
+                });
 
-                            b1.Property<string>("Door")
-                                .HasColumnType("TEXT")
-                                .HasColumnName("door")
-                                .HasAnnotation("Relational:JsonPropertyName", "door");
+            modelBuilder.Entity("RestaurantApi.Models.CouponSchedule", b =>
+                {
+                    b.HasOne("RestaurantApi.Models.Coupon", "Coupon")
+                        .WithOne("Schedule")
+                        .HasForeignKey("RestaurantApi.Models.CouponSchedule", "CouponId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
-                            b1.Property<string>("House")
-                                .HasColumnType("TEXT")
-                                .HasColumnName("house")
-                                .HasAnnotation("Relational:JsonPropertyName", "house");
-
-                            b1.Property<string>("PostalCode")
-                                .HasColumnType("TEXT")
-                                .HasColumnName("postal_code")
-                                .HasAnnotation("Relational:JsonPropertyName", "postalCode");
-
-                            b1.Property<string>("Stairs")
-                                .HasColumnType("TEXT")
-                                .HasColumnName("stairs")
-                                .HasAnnotation("Relational:JsonPropertyName", "stairs");
-
-                            b1.Property<string>("Stick")
-                                .HasColumnType("TEXT")
-                                .HasColumnName("stick")
-                                .HasAnnotation("Relational:JsonPropertyName", "stick");
-
-                            b1.Property<string>("Street")
-                                .HasColumnType("TEXT")
-                                .HasColumnName("street")
-                                .HasAnnotation("Relational:JsonPropertyName", "street");
-
-                            b1.HasKey("CustomerInfoId");
-
-                            b1.ToTable("customer_info");
-
-                            b1.HasAnnotation("Relational:JsonPropertyName", "address");
-
-                            b1.WithOwner()
-                                .HasForeignKey("CustomerInfoId");
-                        });
-
-                    b.Navigation("Address");
+                    b.Navigation("Coupon");
                 });
 
             modelBuilder.Entity("RestaurantApi.Models.DeliveryAddress", b =>
@@ -1133,34 +1218,20 @@ namespace RestaurantApi.Migrations
 
             modelBuilder.Entity("RestaurantApi.Models.Order", b =>
                 {
-                    b.HasOne("RestaurantApi.Models.CustomerInfo", "CustomerInfo")
+                    b.HasOne("RestaurantApi.Models.CustomerOrderInfo", "CustomerInfo")
                         .WithMany()
                         .HasForeignKey("CustomerInfoId");
 
-                    b.HasOne("RestaurantApi.Models.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId");
-
                     b.Navigation("CustomerInfo");
-
-                    b.Navigation("User");
                 });
 
-            modelBuilder.Entity("RestaurantApi.Models.OrderLineItem", b =>
+            modelBuilder.Entity("RestaurantApi.Models.OrderDetails", b =>
                 {
-                    b.HasOne("RestaurantApi.Models.Item", "Item")
-                        .WithMany()
-                        .HasForeignKey("ItemId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("RestaurantApi.Models.Order", "Order")
-                        .WithMany("OrderItems")
-                        .HasForeignKey("OrderId")
+                        .WithOne("OrderDetails")
+                        .HasForeignKey("RestaurantApi.Models.OrderDetails", "OrderId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Item");
 
                     b.Navigation("Order");
                 });
@@ -1193,6 +1264,12 @@ namespace RestaurantApi.Migrations
                     b.Navigation("Items");
                 });
 
+            modelBuilder.Entity("RestaurantApi.Models.Coupon", b =>
+                {
+                    b.Navigation("Schedule")
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("RestaurantApi.Models.Item", b =>
                 {
                     b.Navigation("ItemAllergens");
@@ -1209,7 +1286,7 @@ namespace RestaurantApi.Migrations
 
             modelBuilder.Entity("RestaurantApi.Models.Order", b =>
                 {
-                    b.Navigation("OrderItems");
+                    b.Navigation("OrderDetails");
                 });
 
             modelBuilder.Entity("RestaurantApi.Models.Postcode", b =>

@@ -34,14 +34,9 @@ namespace RestaurantApi.Controllers
                 // Validate required fields based on order method
                 if (request.OrderMethod.ToLower() == "delivery")
                 {
-                    if (request.CustomerInfo?.Address == null)
-                    {
-                        return BadRequest(new { Error = "Address is required for delivery orders" });
-                    }
-
-                    if (string.IsNullOrEmpty(request.CustomerInfo.Address.PostalCode) ||
-                        string.IsNullOrEmpty(request.CustomerInfo.Address.Street) ||
-                        string.IsNullOrEmpty(request.CustomerInfo.Address.House))
+                    if (string.IsNullOrEmpty(request.CustomerInfo.PostalCode) ||
+                        string.IsNullOrEmpty(request.CustomerInfo.Street) ||
+                        string.IsNullOrEmpty(request.CustomerInfo.House))
                     {
                         return BadRequest(new { Error = "Postal code, street, and house number are required for delivery orders" });
                     }
@@ -56,25 +51,6 @@ namespace RestaurantApi.Controllers
                     PaymentMethod = request.PaymentMethod,
                     OrderMethod = request.OrderMethod,
                     SpecialNotes = request.SpecialNotes,
-                    CustomerInfo = new CustomerOrderInfo
-                    {
-                        FirstName = request.CustomerInfo.FirstName,
-                        LastName = request.CustomerInfo.LastName,
-                        Email = request.CustomerInfo.Email,
-                        Phone = request.CustomerInfo.Phone,
-                        Comment = request.CustomerInfo.Comment,
-                        CreateDate = DateTime.UtcNow,
-                        Address = request.OrderMethod.ToLower() == "delivery" ? new RestaurantApi.Models.Address
-                        {
-                            PostalCode = request.CustomerInfo.Address?.PostalCode,
-                            Street = request.CustomerInfo.Address?.Street,
-                            House = request.CustomerInfo.Address?.House,
-                            Stairs = request.CustomerInfo.Address?.Stairs,
-                            Stick = request.CustomerInfo.Address?.Stick,
-                            Door = request.CustomerInfo.Address?.Door,
-                            Bell = request.CustomerInfo.Address?.Bell
-                        } : null
-                    },
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 };
@@ -82,28 +58,22 @@ namespace RestaurantApi.Controllers
                 // Add customer info if provided
                 if (request.CustomerInfo != null)
                 {
-                    var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.CustomerInfo.Email);
-                    if (user == null)
+                    order.CustomerInfo = new CustomerOrderInfo
                     {
-                        user = new User
-                        {
-                            FirstName = request.CustomerInfo.FirstName,
-                            LastName = request.CustomerInfo.LastName,
-                            Email = request.CustomerInfo.Email,
-                            Password = Guid.NewGuid().ToString(),
-                            Phone = request.CustomerInfo.Phone,
-                            PostalCode = request.CustomerInfo.Address?.PostalCode,
-                            Address = request.CustomerInfo.Address?.Street,
-                            House = request.CustomerInfo.Address?.House,
-                            Stairs = request.CustomerInfo.Address?.Stairs,
-                            Door = request.CustomerInfo.Address?.Door,
-                            Bell = request.CustomerInfo.Address?.Bell,
-                            Comment = request.CustomerInfo.Comment
-                        };
-                        _context.Users.Add(user);
-                        await _context.SaveChangesAsync();
-                    }
-                    order.UserId = user.Id;
+                        FirstName = request.CustomerInfo.FirstName,
+                        LastName = request.CustomerInfo.LastName,
+                        Email = request.CustomerInfo.Email,
+                        Phone = request.CustomerInfo.Phone,
+                        Comment = request.CustomerInfo.Comment,
+                        CreateDate = DateTime.UtcNow,
+                        PostalCode = request.OrderMethod.ToLower() == "delivery" ? request.CustomerInfo.PostalCode : null,
+                        Street = request.OrderMethod.ToLower() == "delivery" ? request.CustomerInfo.Street : null,
+                        House = request.OrderMethod.ToLower() == "delivery" ? request.CustomerInfo.House : null,
+                        Stairs = request.OrderMethod.ToLower() == "delivery" ? request.CustomerInfo.Stairs : null,
+                        Stick = request.OrderMethod.ToLower() == "delivery" ? request.CustomerInfo.Stick : null,
+                        Door = request.OrderMethod.ToLower() == "delivery" ? request.CustomerInfo.Door : null,
+                        Bell = request.OrderMethod.ToLower() == "delivery" ? request.CustomerInfo.Bell : null
+                    };
                 }
 
                 // Check for required options
@@ -179,16 +149,13 @@ namespace RestaurantApi.Controllers
                     Email = request.CustomerInfo.Email,
                     Phone = request.CustomerInfo.Phone,
                     CreateDate = DateTime.UtcNow,
-                    Address = request.CustomerInfo.Address != null ? new RestaurantApi.Models.Address
-                    {
-                        PostalCode = request.CustomerInfo.Address.PostalCode,
-                        Street = request.CustomerInfo.Address.Street,
-                        House = request.CustomerInfo.Address.House,
-                        Stairs = request.CustomerInfo.Address.Stairs,
-                        Stick = request.CustomerInfo.Address.Stick,
-                        Door = request.CustomerInfo.Address.Door,
-                        Bell = request.CustomerInfo.Address.Bell
-                    } : null
+                    PostalCode = request.CustomerInfo.PostalCode,
+                    Street = request.CustomerInfo.Street,
+                    House = request.CustomerInfo.House,
+                    Stairs = request.CustomerInfo.Stairs,
+                    Stick = request.CustomerInfo.Stick,
+                    Door = request.CustomerInfo.Door,
+                    Bell = request.CustomerInfo.Bell
                 };
                 _context.CustomerOrderInfos.Add(customerInfo);
                 await _context.SaveChangesAsync();

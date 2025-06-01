@@ -203,7 +203,9 @@ namespace RestaurantApi.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error creating checkout session");
-                return StatusCode(500, new { error = ex.Message });
+                _logger.LogError("Inner exception: {InnerException}", ex.InnerException?.Message);
+                _logger.LogError("Stack trace: {StackTrace}", ex.StackTrace);
+                return StatusCode(500, new { error = ex.Message, innerException = ex.InnerException?.Message });
             }
         }
 
