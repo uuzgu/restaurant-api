@@ -5,6 +5,11 @@ using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Add logging
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+builder.Logging.AddDebug();
+
 // Add CORS
 builder.Services.AddCors(options =>
 {
@@ -30,8 +35,16 @@ builder.Services.AddControllers()
     });
 
 // Add DbContext
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+var logger = builder.Services.BuildServiceProvider().GetRequiredService<ILogger<Program>>();
+logger.LogInformation("Using connection string: {ConnectionString}", connectionString);
+
 builder.Services.AddDbContext<RestaurantContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+{
+    options.UseSqlite(connectionString);
+    options.EnableSensitiveDataLogging();
+    options.EnableDetailedErrors();
+});
 
 // Add Services
 builder.Services.AddScoped<OrderService>();
@@ -58,18 +71,22 @@ app.MapControllers();
 
 // Ensure App_Data directory exists and has proper permissions
 var appDataPath = Path.Combine(Directory.GetCurrentDirectory(), "App_Data");
+logger.LogInformation("App_Data path: {AppDataPath}", appDataPath);
+
 if (!Directory.Exists(appDataPath))
 {
+    logger.LogInformation("Creating App_Data directory");
     Directory.CreateDirectory(appDataPath);
     // Set directory permissions to allow writing
     try
     {
         var directoryInfo = new DirectoryInfo(appDataPath);
         directoryInfo.Attributes &= ~FileAttributes.ReadOnly;
+        logger.LogInformation("Successfully set directory permissions");
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Warning: Could not set directory permissions: {ex.Message}");
+        logger.LogError(ex, "Could not set directory permissions");
     }
 }
 
@@ -80,29 +97,56 @@ using (var scope = app.Services.CreateScope())
     try
     {
         var context = services.GetRequiredService<RestaurantContext>();
+        var scopeLogger = services.GetRequiredService<ILogger<Program>>();
+        
+        scopeLogger.LogInformation("Starting database initialization");
         
         // First ensure the database exists
         context.Database.EnsureCreated();
+        scopeLogger.LogInformation("Database created successfully");
         
         // Then try to apply any pending migrations
         try
         {
-            if (context.Database.GetPendingMigrations().Any())
+            var pendingMigrations = context.Database.GetPendingMigrations().ToList();
+            if (pendingMigrations.Any())
             {
+                scopeLogger.LogInformation("Applying {Count} pending migrations", pendingMigrations.Count);
                 context.Database.Migrate();
+                scopeLogger.LogInformation("Migrations applied successfully");
+            }
+            else
+            {
+                scopeLogger.LogInformation("No pending migrations");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Warning: Could not apply migrations: {ex.Message}");
+            scopeLogger.LogError(ex, "Could not apply migrations");
             // If migrations fail, we'll continue with the existing database
         }
         
-        Console.WriteLine("Database initialized successfully.");
+        // Verify database connection
+        try
+        {
+            var canConnect = context.Database.CanConnect();
+            scopeLogger.LogInformation("Database connection test: {Result}", canConnect ? "Success" : "Failed");
+            
+            if (canConnect)
+            {
+                var categoryCount = context.Categories.Count();
+                scopeLogger.LogInformation("Found {Count} categories in the database", categoryCount);
+            }
+        }
+        catch (Exception ex)
+        {
+            scopeLogger.LogError(ex, "Database connection test failed");
+        }
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"An error occurred while initializing the database: {ex.Message}");
+        var scopeLogger = services.GetRequiredService<ILogger<Program>>();
+        scopeLogger.LogError(ex, "An error occurred while initializing the database");
         // Don't throw the exception, allow the application to start even if database initialization fails
     }
 }
