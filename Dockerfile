@@ -11,4 +11,10 @@ RUN dotnet publish -c Release -o /app/publish
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
+
+# Create App_Data directory and set permissions
+RUN mkdir -p /app/App_Data && \
+    chown -R $APP_UID:$APP_UID /app/App_Data && \
+    chmod -R 755 /app/App_Data
+
 ENTRYPOINT ["dotnet", "RestaurantApi.dll"] 

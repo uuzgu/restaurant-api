@@ -58,6 +58,13 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+// Ensure App_Data directory exists
+var appDataPath = Path.Combine(Directory.GetCurrentDirectory(), "App_Data");
+if (!Directory.Exists(appDataPath))
+{
+    Directory.CreateDirectory(appDataPath);
+}
+
 // Ensure database is created
 using (var scope = app.Services.CreateScope())
 {
