@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RestaurantApi.Data;
 using RestaurantApi.Models;
@@ -69,6 +70,12 @@ app.UseCors("AllowAll");
 app.UseHttpsRedirection();
 
 app.UseAuthorization();
+
+// Log all registered controllers
+var controllerTypes = app.Services.GetRequiredService<IEnumerable<Type>>()
+    .Where(t => t.IsClass && !t.IsAbstract && typeof(ControllerBase).IsAssignableFrom(t));
+logger.LogInformation("Registered controllers: {Controllers}", 
+    string.Join(", ", controllerTypes.Select(t => t.Name)));
 
 app.MapControllers();
 
