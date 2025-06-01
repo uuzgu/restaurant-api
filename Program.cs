@@ -10,9 +10,12 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", builder =>
     {
-        builder.AllowAnyOrigin()
-               .AllowAnyMethod()
-               .AllowAnyHeader();
+        builder.WithOrigins(
+                "http://localhost:3000",
+                "https://restaurant-ui.vercel.app"
+            )
+            .AllowAnyMethod()
+            .AllowAnyHeader();
     });
 });
 
