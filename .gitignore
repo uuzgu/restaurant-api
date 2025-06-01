@@ -40,4 +40,8 @@ msbuild.err
 msbuild.wrn
 
 # Visual Studio
-.vs/ 
+.vs/
+
+# Sensitive files
+appsettings.json
+appsettings.Development.json 
