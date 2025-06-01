@@ -4,6 +4,7 @@ using RestaurantApi.Data;
 using RestaurantApi.Models;
 using RestaurantApi.Services;
 using System.Text.Json.Serialization;
+using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -37,9 +38,20 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.PropertyNamingPolicy = null;
     });
 
+// Add response compression
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+});
+
+// Add memory cache
+builder.Services.AddMemoryCache();
+
 // Add DbContext
 var connectionString = Environment.GetEnvironmentVariable("DATABASE_CONNECTION_STRING") 
-    ?? builder.Configuration.GetConnectionString("DefaultConnection");
+    ?? (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Production"
+        ? "Data Source=/tmp/restaurant.db"
+        : "Data Source=App_Data/restaurant.db");
 var logger = builder.Services.BuildServiceProvider().GetRequiredService<ILogger<Program>>();
 logger.LogInformation("Using connection string: {ConnectionString}", connectionString);
 
@@ -61,23 +73,50 @@ builder.Services.AddSwaggerGen();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-app.UseSwagger();
-app.UseSwaggerUI();
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
 // Use CORS before other middleware
 app.UseCors("AllowAll");
 
+// Add routing middleware
+app.UseRouting();
+
 app.UseHttpsRedirection();
 
+// Add authentication and authorization middleware
+app.UseAuthentication();
 app.UseAuthorization();
 
-// Log all registered controllers
+// Log all registered controllers and their routes
 var controllerTypes = app.Services.GetRequiredService<IEnumerable<Type>>()
     .Where(t => t.IsClass && !t.IsAbstract && typeof(ControllerBase).IsAssignableFrom(t));
-logger.LogInformation("Registered controllers: {Controllers}", 
-    string.Join(", ", controllerTypes.Select(t => t.Name)));
 
+foreach (var controllerType in controllerTypes)
+{
+    var routeAttribute = controllerType.GetCustomAttributes(typeof(RouteAttribute), true)
+        .FirstOrDefault() as RouteAttribute;
+    var route = routeAttribute?.Template ?? "No route template";
+    logger.LogInformation("Registered controller: {Controller} with route: {Route}", 
+        controllerType.Name, route);
+}
+
+// Add explicit route configuration
+app.MapControllerRoute(
+    name: "default",
+    pattern: "api/{controller}/{action=Index}/{id?}");
+
+// Map controllers
 app.MapControllers();
+
+// Log the application startup
+logger.LogInformation("Application started. Environment: {Environment}", 
+    app.Environment.EnvironmentName);
+logger.LogInformation("Application is running at: {Url}", 
+    app.Urls.FirstOrDefault() ?? "No URL configured");
 
 // Ensure App_Data directory exists and has proper permissions
 var appDataPath = Path.Combine(Directory.GetCurrentDirectory(), "App_Data");
@@ -146,50 +185,61 @@ using (var scope = app.Services.CreateScope())
             {
                 // Check if we need to seed data
                 var categoryCount = context.Categories.Count();
-                scopeLogger.LogInformation("Found {Count} categories in the database", categoryCount);
+                var itemCount = context.Items.Count();
+                scopeLogger.LogInformation("Current database state - Categories: {CategoryCount}, Items: {ItemCount}", 
+                    categoryCount, itemCount);
 
                 if (categoryCount == 0)
                 {
-                    scopeLogger.LogInformation("Seeding initial data");
-                    // Seed categories
-                    context.Categories.AddRange(
-                        new Category { Id = -1, Name = "Promotions" },
-                        new Category { Id = -2, Name = "Pizza" },
-                        new Category { Id = -3, Name = "Bowl" },
-                        new Category { Id = -4, Name = "Cheeseburger" },
-                        new Category { Id = -5, Name = "Salad" },
-                        new Category { Id = -6, Name = "Breakfast" },
-                        new Category { Id = -7, Name = "Drinks" },
-                        new Category { Id = -8, Name = "Soup" },
-                        new Category { Id = -9, Name = "Dessert" }
-                    );
+                    scopeLogger.LogInformation("Starting data seeding process");
+                    try
+                    {
+                        // Seed categories
+                        context.Categories.AddRange(
+                            new Category { Id = -1, Name = "Promotions" },
+                            new Category { Id = -2, Name = "Pizza" },
+                            new Category { Id = -3, Name = "Bowl" },
+                            new Category { Id = -4, Name = "Cheeseburger" },
+                            new Category { Id = -5, Name = "Salad" },
+                            new Category { Id = -6, Name = "Breakfast" },
+                            new Category { Id = -7, Name = "Drinks" },
+                            new Category { Id = -8, Name = "Soup" },
+                            new Category { Id = -9, Name = "Dessert" }
+                        );
+                        context.SaveChanges();
+                        scopeLogger.LogInformation("Categories seeded successfully");
 
-                    // Seed items
-                    context.Items.AddRange(
-                        new Item
-                        {
-                            Id = -1,
-                            Name = "Special Combo",
-                            Description = "Get a pizza and drink at a special price!",
-                            Price = 15.99m,
-                            CategoryId = -1,
-                            ImageUrl = "/images/categories/promotionsCategory.png"
-                        },
-                        new Item
-                        {
-                            Id = -2,
-                            Name = "Family Bundle",
-                            Description = "Perfect for the whole family - 2 pizzas and 4 drinks",
-                            Price = 29.99m,
-                            CategoryId = -1,
-                            ImageUrl = "/images/categories/promotionsCategory.png"
-                        },
-                        new Item { Id = 1, CategoryId = -7, Name = "Cola", Description = "Classic carbonated soft drink", Price = 4 },
-                        new Item { Id = 2, CategoryId = -5, Name = "Salad", Description = "Salad with fresh vegetables and cheese", ImageUrl = "https://restaurant-images33.s3.eu-north-1.amazonaws.com/salad.jpg", Price = 8 }
-                    );
-
-                    context.SaveChanges();
-                    scopeLogger.LogInformation("Initial data seeded successfully");
+                        // Seed items
+                        context.Items.AddRange(
+                            new Item
+                            {
+                                Id = -1,
+                                Name = "Special Combo",
+                                Description = "Get a pizza and drink at a special price!",
+                                Price = 15.99m,
+                                CategoryId = -1,
+                                ImageUrl = "/images/categories/promotionsCategory.png"
+                            },
+                            new Item
+                            {
+                                Id = -2,
+                                Name = "Family Bundle",
+                                Description = "Perfect for the whole family - 2 pizzas and 4 drinks",
+                                Price = 29.99m,
+                                CategoryId = -1,
+                                ImageUrl = "/images/categories/promotionsCategory.png"
+                            },
+                            new Item { Id = 1, CategoryId = -7, Name = "Cola", Description = "Classic carbonated soft drink", Price = 4 },
+                            new Item { Id = 2, CategoryId = -5, Name = "Salad", Description = "Salad with fresh vegetables and cheese", ImageUrl = "https://restaurant-images33.s3.eu-north-1.amazonaws.com/salad.jpg", Price = 8 }
+                        );
+                        context.SaveChanges();
+                        scopeLogger.LogInformation("Items seeded successfully");
+                    }
+                    catch (Exception ex)
+                    {
+                        scopeLogger.LogError(ex, "Error during data seeding");
+                        throw;
+                    }
                 }
                 else
                 {
@@ -201,11 +251,24 @@ using (var scope = app.Services.CreateScope())
                 var finalItemCount = context.Items.Count();
                 scopeLogger.LogInformation("Final database state - Categories: {CategoryCount}, Items: {ItemCount}", 
                     finalCategoryCount, finalItemCount);
+
+                // Log sample data for verification
+                var sampleCategories = context.Categories.Take(3).ToList();
+                var sampleItems = context.Items.Take(3).ToList();
+                scopeLogger.LogInformation("Sample Categories: {Categories}", 
+                    string.Join(", ", sampleCategories.Select(c => $"{c.Id}: {c.Name}")));
+                scopeLogger.LogInformation("Sample Items: {Items}", 
+                    string.Join(", ", sampleItems.Select(i => $"{i.Id}: {i.Name} (Category: {i.CategoryId})")));
+            }
+            else
+            {
+                scopeLogger.LogError("Could not connect to the database");
             }
         }
         catch (Exception ex)
         {
-            scopeLogger.LogError(ex, "Database connection test or seeding failed");
+            scopeLogger.LogError(ex, "An error occurred during database initialization");
+            throw;
         }
     }
     catch (Exception ex)
