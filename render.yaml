@@ -2,13 +2,15 @@ services:
   - type: web
     name: restaurant-api
     env: dotnet
-    buildCommand: dotnet build
+    buildCommand: |
+      mkdir -p App_Data
+      dotnet build
     startCommand: dotnet run
     envVars:
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
       - key: ConnectionStrings__DefaultConnection
-        value: Data Source=App_Data/restaurant.db
+        value: Data Source=/opt/render/project/src/App_Data/restaurant.db
       - key: JwtSettings__SecretKey
         generateValue: true
       - key: JwtSettings__Issuer

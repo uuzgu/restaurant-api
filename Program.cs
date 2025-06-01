@@ -58,19 +58,45 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// Ensure App_Data directory exists
+// Ensure App_Data directory exists and has proper permissions
 var appDataPath = Path.Combine(Directory.GetCurrentDirectory(), "App_Data");
 if (!Directory.Exists(appDataPath))
 {
     Directory.CreateDirectory(appDataPath);
+    // Set directory permissions to allow writing
+    try
+    {
+        var directoryInfo = new DirectoryInfo(appDataPath);
+        directoryInfo.Attributes &= ~FileAttributes.ReadOnly;
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Warning: Could not set directory permissions: {ex.Message}");
+    }
 }
 
-// Ensure database is created
+// Ensure database is created and migrated
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
-    var context = services.GetRequiredService<RestaurantContext>();
-    context.Database.EnsureCreated();
+    try
+    {
+        var context = services.GetRequiredService<RestaurantContext>();
+        context.Database.EnsureCreated();
+        
+        // Run any pending migrations
+        if (context.Database.GetPendingMigrations().Any())
+        {
+            context.Database.Migrate();
+        }
+        
+        Console.WriteLine("Database initialized successfully.");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"An error occurred while initializing the database: {ex.Message}");
+        throw;
+    }
 }
 
 app.Run();
