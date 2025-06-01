@@ -35,7 +35,8 @@ builder.Services.AddControllers()
     });
 
 // Add DbContext
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+var connectionString = Environment.GetEnvironmentVariable("DATABASE_CONNECTION_STRING") 
+    ?? builder.Configuration.GetConnectionString("DefaultConnection");
 var logger = builder.Services.BuildServiceProvider().GetRequiredService<ILogger<Program>>();
 logger.LogInformation("Using connection string: {ConnectionString}", connectionString);
 
