@@ -85,6 +85,7 @@ app.UseCors("AllowAll");
 // Add routing middleware
 app.UseRouting();
 
+// Configure HTTPS redirection
 app.UseHttpsRedirection();
 
 // Add authentication and authorization middleware
@@ -107,6 +108,11 @@ foreach (var controllerType in controllerTypes)
 // Add explicit route configuration
 app.MapControllerRoute(
     name: "default",
+    pattern: "{controller=Home}/{action=Index}/{id?}");
+
+// Map API routes
+app.MapControllerRoute(
+    name: "api",
     pattern: "api/{controller}/{action=Index}/{id?}");
 
 // Map controllers
