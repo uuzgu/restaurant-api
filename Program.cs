@@ -22,7 +22,8 @@ builder.Services.AddCors(options =>
                 "https://restaurant-ui-gules.vercel.app"
             )
             .AllowAnyMethod()
-            .AllowAnyHeader();
+            .AllowAnyHeader()
+            .AllowCredentials();
     });
 });
 
