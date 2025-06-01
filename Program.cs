@@ -12,7 +12,8 @@ builder.Services.AddCors(options =>
     {
         builder.WithOrigins(
                 "http://localhost:3000",
-                "https://restaurant-ui.vercel.app"
+                "https://restaurant-ui.vercel.app",
+                "https://restaurant-ui-gules.vercel.app"
             )
             .AllowAnyMethod()
             .AllowAnyHeader();
@@ -43,11 +44,8 @@ builder.Services.AddSwaggerGen();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+app.UseSwagger();
+app.UseSwaggerUI();
 
 // Use CORS before other middleware
 app.UseCors("AllowAll");
