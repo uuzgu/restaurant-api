@@ -110,13 +110,10 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
-// Map API routes
+// Map API routes with explicit api prefix
 app.MapControllerRoute(
     name: "api",
     pattern: "api/{controller}/{action=Index}/{id?}");
-
-// Map controllers
-app.MapControllers();
 
 // Log the application startup
 logger.LogInformation("Application started. Environment: {Environment}", 
