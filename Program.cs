@@ -156,11 +156,20 @@ using (var scope = app.Services.CreateScope())
         
         scopeLogger.LogInformation("Starting database initialization");
         
-        // First ensure the database exists
-        context.Database.EnsureCreated();
-        scopeLogger.LogInformation("Database created successfully");
+        // Check if database exists
+        var canConnect = context.Database.CanConnect();
+        if (!canConnect)
+        {
+            scopeLogger.LogInformation("Database does not exist, creating...");
+            context.Database.EnsureCreated();
+            scopeLogger.LogInformation("Database created successfully");
+        }
+        else
+        {
+            scopeLogger.LogInformation("Database exists, checking for migrations...");
+        }
         
-        // Then try to apply any pending migrations
+        // Apply any pending migrations
         try
         {
             var pendingMigrations = context.Database.GetPendingMigrations().ToList();
@@ -181,34 +190,18 @@ using (var scope = app.Services.CreateScope())
             // If migrations fail, we'll continue with the existing database
         }
         
-        // Verify database connection and seed data
+        // Verify database connection and data
         try
         {
-            var canConnect = context.Database.CanConnect();
-            scopeLogger.LogInformation("Database connection test: {Result}", canConnect ? "Success" : "Failed");
+            var finalCanConnect = context.Database.CanConnect();
+            scopeLogger.LogInformation("Database connection test: {Result}", finalCanConnect ? "Success" : "Failed");
             
-            if (canConnect)
+            if (finalCanConnect)
             {
-                // Check if we need to seed data
                 var categoryCount = context.Categories.Count();
                 var itemCount = context.Items.Count();
                 scopeLogger.LogInformation("Current database state - Categories: {CategoryCount}, Items: {ItemCount}", 
                     categoryCount, itemCount);
-
-                if (categoryCount == 0)
-                {
-                    scopeLogger.LogInformation("Database is empty, but we have existing data in the database file. Please ensure the database file is properly copied to App_Data directory.");
-                }
-                else
-                {
-                    scopeLogger.LogInformation("Database already contains data, skipping seeding");
-                }
-
-                // Verify data
-                var finalCategoryCount = context.Categories.Count();
-                var finalItemCount = context.Items.Count();
-                scopeLogger.LogInformation("Final database state - Categories: {CategoryCount}, Items: {ItemCount}", 
-                    finalCategoryCount, finalItemCount);
             }
         }
         catch (Exception ex)
