@@ -15,7 +15,7 @@ namespace RestaurantApi.Data
         public DbSet<Offer> Offers { get; set; }
         public DbSet<ItemOffer> ItemOffers { get; set; }
         public DbSet<Order> Orders { get; set; }
-        public DbSet<OrderDetails> OrderDetails { get; set; }
+        public DbSet<OrderDetail> OrderDetails { get; set; }
         public DbSet<CustomerOrderInfo> CustomerOrderInfos { get; set; }
         public DbSet<Promotion> Promotions { get; set; }
         public DbSet<ItemAllergen> ItemAllergens { get; set; }
@@ -51,19 +51,30 @@ namespace RestaurantApi.Data
                 entity.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
                 entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").IsRequired();
                 entity.Property(e => e.PaymentMethod).HasColumnName("payment_method").IsRequired();
+                entity.HasMany(e => e.OrderDetails)
+                    .WithOne(d => d.Order)
+                    .HasForeignKey(d => d.OrderId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
-            // Configure OrderDetails entity
-            modelBuilder.Entity<OrderDetails>(entity =>
+            // Configure OrderDetail entity
+            modelBuilder.Entity<OrderDetail>(entity =>
             {
                 entity.ToTable("order_details");
                 entity.HasKey(e => e.Id).HasName("id");
-                entity.Property(e => e.OrderId).HasColumnName("order_id");
-                entity.Property(e => e.ItemDetails).HasColumnName("item_details").IsRequired();
+                entity.Property(e => e.OrderId).HasColumnName("order_id").IsRequired();
+                entity.Property(e => e.ItemId).HasColumnName("item_id").IsRequired();
+                entity.Property(e => e.Quantity).HasColumnName("quantity").IsRequired();
+                entity.Property(e => e.Price).HasColumnName("price").IsRequired();
+                entity.Property(e => e.Notes).HasColumnName("notes");
                 entity.HasOne(e => e.Order)
-                    .WithOne(o => o.OrderDetails)
-                    .HasForeignKey<OrderDetails>(e => e.OrderId)
+                    .WithMany(o => o.OrderDetails)
+                    .HasForeignKey(e => e.OrderId)
                     .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.Item)
+                    .WithMany()
+                    .HasForeignKey(e => e.ItemId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             // Configure Item entity

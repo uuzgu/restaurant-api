@@ -52,7 +52,7 @@ namespace RestaurantApi.Models
 
         // Navigation properties
         public virtual CustomerOrderInfo? CustomerInfo { get; set; }
-        public virtual OrderDetails? OrderDetails { get; set; }
+        public virtual ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
     }
 
     [Table("order_details")]

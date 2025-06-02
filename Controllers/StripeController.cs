@@ -1,22 +1,16 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using RestaurantApi.Models;
 using RestaurantApi.Data;
+using RestaurantApi.Models;
 using Stripe;
 using Stripe.Checkout;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
 namespace RestaurantApi.Controllers
 {
-    [Route("api/[controller]")]
     [ApiController]
+    [Route("api/[controller]")]
     public class StripeController : ControllerBase
     {
         private readonly RestaurantContext _context;
@@ -28,54 +22,23 @@ namespace RestaurantApi.Controllers
             _context = context;
             _configuration = configuration;
             _logger = logger;
-            StripeConfiguration.ApiKey = _configuration["Stripe:SecretKey"];
         }
 
-        // POST: api/stripe/create-checkout-session
         [HttpPost("create-checkout-session")]
         public async Task<IActionResult> CreateCheckoutSession([FromBody] CreateCheckoutSessionRequest request)
         {
             try
             {
-                _logger.LogInformation("Received checkout session request: {@Request}", request);
-
-                if (request.Items == null || !request.Items.Any())
+                var stripeApiKey = _configuration["Stripe:SecretKey"];
+                if (string.IsNullOrEmpty(stripeApiKey))
                 {
-                    return BadRequest("No items in the order");
+                    return StatusCode(500, "Stripe API key is not configured");
                 }
 
-                // Validate required fields based on order method
-                if (request.OrderMethod.ToLower() == "delivery")
-                {
-                    if (string.IsNullOrEmpty(request.CustomerInfo.PostalCode) ||
-                        string.IsNullOrEmpty(request.CustomerInfo.Street) ||
-                        string.IsNullOrEmpty(request.CustomerInfo.House))
-                    {
-                        return BadRequest(new { Error = "Postal code, street, and house number are required for delivery orders" });
-                    }
-                }
+                StripeConfiguration.ApiKey = stripeApiKey;
 
-                // Create customer info
-                var customerInfo = new CustomerOrderInfo
-                {
-                    FirstName = request.CustomerInfo.FirstName,
-                    LastName = request.CustomerInfo.LastName,
-                    Email = request.CustomerInfo.Email,
-                    Phone = request.CustomerInfo.Phone,
-                    CreateDate = DateTime.UtcNow,
-                    PostalCode = request.CustomerInfo.PostalCode,
-                    Street = request.CustomerInfo.Street,
-                    House = request.CustomerInfo.House,
-                    Stairs = request.CustomerInfo.Stairs,
-                    Stick = request.CustomerInfo.Stick,
-                    Door = request.CustomerInfo.Door,
-                    Bell = request.CustomerInfo.Bell
-                };
-                _context.CustomerOrderInfos.Add(customerInfo);
-                await _context.SaveChangesAsync();
-
-                // Create order
-                var newOrder = new Order
+                // Create a new order
+                var order = new Order
                 {
                     OrderNumber = Guid.NewGuid().ToString("N").Substring(0, 8).ToUpper(),
                     Status = request.Status,
@@ -83,143 +46,93 @@ namespace RestaurantApi.Controllers
                     PaymentMethod = request.PaymentMethod,
                     OrderMethod = request.OrderMethod,
                     SpecialNotes = request.SpecialNotes,
-                    CustomerInfoId = customerInfo.Id,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 };
-                _context.Orders.Add(newOrder);
+
+                // Add customer info if provided
+                if (request.CustomerInfo != null)
+                {
+                    order.CustomerInfo = new CustomerOrderInfo
+                    {
+                        FirstName = request.CustomerInfo.FirstName,
+                        LastName = request.CustomerInfo.LastName,
+                        Email = request.CustomerInfo.Email,
+                        Phone = request.CustomerInfo.Phone,
+                        CreateDate = DateTime.UtcNow,
+                        PostalCode = request.OrderMethod.ToLower() == "delivery" ? request.CustomerInfo.PostalCode : null,
+                        Street = request.OrderMethod.ToLower() == "delivery" ? request.CustomerInfo.Street : null,
+                        House = request.OrderMethod.ToLower() == "delivery" ? request.CustomerInfo.House : null,
+                        Stairs = request.OrderMethod.ToLower() == "delivery" ? request.CustomerInfo.Stairs : null,
+                        Stick = request.OrderMethod.ToLower() == "delivery" ? request.CustomerInfo.Stick : null,
+                        Door = request.OrderMethod.ToLower() == "delivery" ? request.CustomerInfo.Door : null,
+                        Bell = request.OrderMethod.ToLower() == "delivery" ? request.CustomerInfo.Bell : null
+                    };
+                }
+
+                _context.Orders.Add(order);
                 await _context.SaveChangesAsync();
 
                 // Create order details
-                var orderDetails = new OrderDetails
+                foreach (var item in request.Items)
                 {
-                    OrderId = newOrder.Id,
-                    ItemDetails = System.Text.Json.JsonSerializer.Serialize(
-                        request.Items.Select(item => new
-                        {
-                            Id = item.Id,
-                            Name = item.Name,
-                            Quantity = item.Quantity,
-                            Price = item.Price,
-                            SelectedItems = item.SelectedItems?.Select(selectedItem => new
-                            {
-                                Id = selectedItem.Id,
-                                Name = selectedItem.Name,
-                                Quantity = selectedItem.Quantity,
-                                Price = selectedItem.Price
-                            }).ToList()
-                        }).ToList()
-                    )
-                };
-                _context.OrderDetails.Add(orderDetails);
+                    var orderDetail = new OrderDetail
+                    {
+                        OrderId = order.Id,
+                        ItemId = item.Id,
+                        Quantity = item.Quantity,
+                        Price = item.Price,
+                        Notes = item.Notes
+                    };
+
+                    _context.OrderDetails.Add(orderDetail);
+                }
                 await _context.SaveChangesAsync();
 
-                // For cash payments, return order details without creating a Stripe session
-                if (request.PaymentMethod.ToLower() == "cash")
-                {
-                    return Ok(new { 
-                        orderId = newOrder.Id,
-                        orderNumber = newOrder.OrderNumber
-                    });
-                }
-
-                // Create Stripe checkout session only for card payments
                 var options = new SessionCreateOptions
                 {
                     PaymentMethodTypes = new List<string> { "card" },
-                    LineItems = new List<SessionLineItemOptions>
+                    LineItems = request.Items.Select(item => new SessionLineItemOptions
                     {
-                        new SessionLineItemOptions
+                        PriceData = new SessionLineItemPriceDataOptions
                         {
-                            PriceData = new SessionLineItemPriceDataOptions
+                            Currency = "eur",
+                            ProductData = new SessionLineItemPriceDataProductDataOptions
                             {
-                                Currency = "eur",
-                                UnitAmount = (long)(request.TotalAmount * 100),
-                                ProductData = new SessionLineItemPriceDataProductDataOptions
-                                {
-                                    Name = "Order Total",
-                                },
+                                Name = item.Name,
                             },
-                            Quantity = 1,
+                            UnitAmount = (long)(item.Price * 100), // Convert to cents
                         },
-                    },
+                        Quantity = item.Quantity,
+                    }).ToList(),
                     Mode = "payment",
-                    SuccessUrl = $"{_configuration["FrontendUrl"]}/payment/success?session_id={{CHECKOUT_SESSION_ID}}",
-                    CancelUrl = $"{_configuration["FrontendUrl"]}/payment/cancel",
+                    SuccessUrl = $"{_configuration["FrontendUrl"]}/payment-success?session_id={{CHECKOUT_SESSION_ID}}",
+                    CancelUrl = $"{_configuration["FrontendUrl"]}/payment-cancel",
                     CustomerEmail = request.CustomerInfo.Email,
-                    ShippingAddressCollection = request.OrderMethod.ToLower() == "delivery" ? new SessionShippingAddressCollectionOptions
-                    {
-                        AllowedCountries = new List<string> { "HU" },
-                    } : null,
-                    ShippingOptions = request.OrderMethod.ToLower() == "delivery" ? new List<SessionShippingOptionOptions>
-                    {
-                        new SessionShippingOptionOptions
-                        {
-                            ShippingRateData = new SessionShippingOptionShippingRateDataOptions
-                            {
-                                Type = "fixed_amount",
-                                FixedAmount = new SessionShippingOptionShippingRateDataFixedAmountOptions
-                                {
-                                    Amount = 0,
-                                    Currency = "eur",
-                                },
-                                DisplayName = "Free Delivery",
-                                DeliveryEstimate = new SessionShippingOptionShippingRateDataDeliveryEstimateOptions
-                                {
-                                    Minimum = new SessionShippingOptionShippingRateDataDeliveryEstimateMinimumOptions
-                                    {
-                                        Unit = "hour",
-                                        Value = 1,
-                                    },
-                                    Maximum = new SessionShippingOptionShippingRateDataDeliveryEstimateMaximumOptions
-                                    {
-                                        Unit = "hour",
-                                        Value = 2,
-                                    },
-                                },
-                            },
-                        },
-                    } : null,
                     Metadata = new Dictionary<string, string>
                     {
-                        { "orderId", newOrder.Id.ToString() }
+                        { "orderId", order.Id.ToString() },
+                        { "orderNumber", order.OrderNumber }
                     }
                 };
 
                 var service = new SessionService();
                 var session = await service.CreateAsync(options);
 
-                // Update order with Stripe session ID
-                newOrder.StripeSessionId = session.Id;
-                await _context.SaveChangesAsync();
-
-                return Ok(new { 
-                    url = session.Url, 
-                    sessionId = session.Id,
-                    orderId = newOrder.Id,
-                    orderNumber = newOrder.OrderNumber
-                });
+                return Ok(new { sessionId = session.Id });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error creating checkout session");
-                _logger.LogError("Inner exception: {InnerException}", ex.InnerException?.Message);
-                _logger.LogError("Stack trace: {StackTrace}", ex.StackTrace);
-                return StatusCode(500, new { error = ex.Message, innerException = ex.InnerException?.Message });
+                return StatusCode(500, $"Error creating checkout session: {ex.Message}");
             }
         }
 
-        // GET: api/stripe/payment-success
         [HttpGet("payment-success")]
         public async Task<IActionResult> PaymentSuccess([FromQuery] string session_id)
         {
             try
             {
-                if (string.IsNullOrEmpty(session_id))
-                {
-                    return BadRequest("Session ID is required");
-                }
-
                 var service = new SessionService();
                 var session = await service.GetAsync(session_id);
 
@@ -228,11 +141,8 @@ namespace RestaurantApi.Controllers
                     return NotFound("Session not found");
                 }
 
-                // Get the order from the database using the session ID
-                var order = await _context.Orders
-                    .Include(o => o.CustomerInfo)
-                    .FirstOrDefaultAsync(o => o.StripeSessionId == session_id);
-
+                // Update order status in database
+                var order = await _context.Orders.FindAsync(int.Parse(session.Metadata["orderId"]));
                 if (order == null)
                 {
                     return NotFound("Order not found");
@@ -262,7 +172,6 @@ namespace RestaurantApi.Controllers
             }
         }
 
-        // POST: api/stripe/payment-cancel
         [HttpPost("payment-cancel")]
         public async Task<ActionResult> HandlePaymentCancel([FromBody] PaymentSuccessRequest request)
         {
@@ -361,7 +270,7 @@ namespace RestaurantApi.Controllers
     {
         [Required]
         [JsonPropertyName("items")]
-        public required List<StripeCheckoutItem> Items { get; set; }
+        public required List<OrderItemRequest> Items { get; set; }
 
         [Required]
         [JsonPropertyName("customerInfo")]
@@ -385,48 +294,6 @@ namespace RestaurantApi.Controllers
         [Required]
         [JsonPropertyName("totalAmount")]
         public required decimal TotalAmount { get; set; }
-    }
-
-    public class CustomerInfoRequest
-    {
-        [Required]
-        [JsonPropertyName("firstName")]
-        public required string FirstName { get; set; }
-
-        [Required]
-        [JsonPropertyName("lastName")]
-        public required string LastName { get; set; }
-
-        [Required]
-        [EmailAddress]
-        [JsonPropertyName("email")]
-        public required string Email { get; set; }
-
-        [Required]
-        [Phone]
-        [JsonPropertyName("phone")]
-        public required string Phone { get; set; }
-
-        [JsonPropertyName("postalCode")]
-        public string? PostalCode { get; set; }
-
-        [JsonPropertyName("street")]
-        public string? Street { get; set; }
-
-        [JsonPropertyName("house")]
-        public string? House { get; set; }
-
-        [JsonPropertyName("stairs")]
-        public string? Stairs { get; set; }
-
-        [JsonPropertyName("stick")]
-        public string? Stick { get; set; }
-
-        [JsonPropertyName("door")]
-        public string? Door { get; set; }
-
-        [JsonPropertyName("bell")]
-        public string? Bell { get; set; }
     }
 
     public class CreatePaymentIntentRequest

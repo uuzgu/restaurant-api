@@ -101,32 +101,26 @@ namespace RestaurantApi.Controllers
                 await _context.SaveChangesAsync();
 
                 // Create order details
-                var orderDetails = new OrderDetails
+                foreach (var item in request.Items)
                 {
-                    OrderId = order.Id,
-                    ItemDetails = System.Text.Json.JsonSerializer.Serialize(
-                        request.Items.Select(item => new
-                        {
-                            Id = item.Id,
-                            Name = item.Name,
-                            Quantity = item.Quantity,
-                            Price = item.Price,
-                            SelectedOptions = item.SelectedOptions.Select(optionId => new
-                            {
-                                OptionId = optionId,
-                                Quantity = 1 // Default quantity, can be updated if needed
-                            }).ToList()
-                        }).ToList()
-                    )
-                };
+                    var orderDetail = new OrderDetail
+                    {
+                        OrderId = order.Id,
+                        ItemId = item.Id,
+                        Quantity = item.Quantity,
+                        Price = item.Price,
+                        Notes = item.Notes
+                    };
 
-                _context.OrderDetails.Add(orderDetails);
+                    _context.OrderDetails.Add(orderDetail);
+                }
                 await _context.SaveChangesAsync();
 
                 return Ok(new { OrderId = order.Id, OrderNumber = order.OrderNumber });
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error creating order");
                 return BadRequest(new { Error = ex.Message });
             }
         }
@@ -180,81 +174,147 @@ namespace RestaurantApi.Controllers
                 await _context.SaveChangesAsync();
 
                 // Create order details
-                var orderDetails = new OrderDetails
+                foreach (var item in request.Items)
                 {
-                    OrderId = newOrder.Id,
-                    ItemDetails = System.Text.Json.JsonSerializer.Serialize(
-                        request.Items.Select(item => new
-                        {
-                            Id = item.Id,
-                            Name = item.Name,
-                            Quantity = item.Quantity,
-                            Price = item.Price,
-                            SelectedItems = item.SelectedItems?.Select(selectedItem => new
-                            {
-                                Id = selectedItem.Id,
-                                Name = selectedItem.Name,
-                                Quantity = selectedItem.Quantity,
-                                Price = selectedItem.Price
-                            }).ToList()
-                        }).ToList()
-                    )
-                };
-                _context.OrderDetails.Add(orderDetails);
+                    var orderDetail = new OrderDetail
+                    {
+                        OrderId = newOrder.Id,
+                        ItemId = item.Id,
+                        Quantity = item.Quantity,
+                        Price = item.Price,
+                        Notes = item.Notes
+                    };
+
+                    _context.OrderDetails.Add(orderDetail);
+                }
                 await _context.SaveChangesAsync();
 
-                return Ok(new { 
-                    orderId = newOrder.Id,
-                    orderNumber = newOrder.OrderNumber
-                });
+                return Ok(new { OrderId = newOrder.Id, OrderNumber = newOrder.OrderNumber });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error creating cash order");
-                return StatusCode(500, new { error = ex.Message });
+                return BadRequest(new { Error = ex.Message });
             }
-        }
-
-        private string GenerateOrderNumber()
-        {
-            return $"ORD-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString().Substring(0, 8)}";
         }
 
         [HttpGet("{id}")]
         public async Task<ActionResult<Order>> GetOrderById(int id)
         {
-            var order = await _context.Orders
-                .Include(o => o.CustomerInfo)
-                .FirstOrDefaultAsync(o => o.Id == id);
-
-            if (order == null)
+            try
             {
-                return NotFound();
-            }
+                var order = await _context.Orders
+                    .Include(o => o.CustomerInfo)
+                    .Include(o => o.OrderDetails)
+                        .ThenInclude(od => od.Item)
+                    .FirstOrDefaultAsync(o => o.Id == id);
 
-            return order;
+                if (order == null)
+                {
+                    return NotFound();
+                }
+
+                return Ok(order);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching order {OrderId}", id);
+                return StatusCode(500, new { Error = "An error occurred while fetching the order" });
+            }
         }
     }
 
-    public class CreateCashOrderRequest
+    public class CreateOrderRequest
     {
         [Required]
-        [JsonPropertyName("items")]
-        public required List<OrderItemRequest> Items { get; set; }
-
-        [Required]
-        [JsonPropertyName("customerInfo")]
-        public required CustomerInfoRequest CustomerInfo { get; set; }
-
-        [Required]
         [JsonPropertyName("orderMethod")]
-        public required string OrderMethod { get; set; }
+        public string OrderMethod { get; set; }
+
+        [Required]
+        [JsonPropertyName("paymentMethod")]
+        public string PaymentMethod { get; set; }
+
+        [Required]
+        [JsonPropertyName("status")]
+        public string Status { get; set; }
+
+        [Required]
+        [JsonPropertyName("totalAmount")]
+        public decimal TotalAmount { get; set; }
 
         [JsonPropertyName("specialNotes")]
         public string? SpecialNotes { get; set; }
 
         [Required]
+        [JsonPropertyName("customerInfo")]
+        public CustomerInfoRequest CustomerInfo { get; set; }
+
+        [Required]
+        [JsonPropertyName("items")]
+        public List<OrderItemRequest> Items { get; set; }
+    }
+
+    public class CreateCashOrderRequest
+    {
+        [Required]
+        [JsonPropertyName("orderMethod")]
+        public string OrderMethod { get; set; }
+
+        [Required]
         [JsonPropertyName("totalAmount")]
-        public required decimal TotalAmount { get; set; }
+        public decimal TotalAmount { get; set; }
+
+        [JsonPropertyName("specialNotes")]
+        public string? SpecialNotes { get; set; }
+
+        [Required]
+        [JsonPropertyName("customerInfo")]
+        public CustomerInfoRequest CustomerInfo { get; set; }
+
+        [Required]
+        [JsonPropertyName("items")]
+        public List<OrderItemRequest> Items { get; set; }
+    }
+
+    public class CustomerInfoRequest
+    {
+        [Required]
+        public string FirstName { get; set; }
+        [Required]
+        public string LastName { get; set; }
+        [Required]
+        public string Email { get; set; }
+        public string? Phone { get; set; }
+        public string? PostalCode { get; set; }
+        public string? Street { get; set; }
+        public string? House { get; set; }
+        public string? Stairs { get; set; }
+        public string? Stick { get; set; }
+        public string? Door { get; set; }
+        public string? Bell { get; set; }
+        public string? Comment { get; set; }
+    }
+
+    public class OrderItemRequest
+    {
+        [Required]
+        public int Id { get; set; }
+        [Required]
+        public string Name { get; set; }
+        [Required]
+        public int Quantity { get; set; }
+        [Required]
+        public decimal Price { get; set; }
+        public string? Notes { get; set; }
+        public List<int> SelectedOptions { get; set; } = new List<int>();
+        public List<SelectedItemRequest>? SelectedItems { get; set; }
+    }
+
+    public class SelectedItemRequest
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public int Quantity { get; set; }
+        public decimal Price { get; set; }
     }
 } 

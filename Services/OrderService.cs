@@ -89,26 +89,18 @@ namespace RestaurantApi.Services
             await _context.SaveChangesAsync();
 
             // Create order details
-            var orderDetails = new OrderDetails
+            foreach (var item in items)
             {
-                OrderId = order.Id,
-                ItemDetails = System.Text.Json.JsonSerializer.Serialize(
-                    items.Select(item => new
-                    {
-                        Id = item.Id,
-                        Name = item.Name,
-                        Quantity = item.Quantity,
-                        Price = item.Price,
-                        SelectedOptions = item.SelectedOptions.Select(optionId => new
-                        {
-                            OptionId = optionId,
-                            Quantity = 1 // Default quantity, can be updated if needed
-                        }).ToList()
-                    }).ToList()
-                )
-            };
-
-            _context.OrderDetails.Add(orderDetails);
+                var orderDetail = new OrderDetail
+                {
+                    OrderId = order.Id,
+                    ItemId = item.Id,
+                    Quantity = item.Quantity,
+                    Price = item.Price,
+                    Notes = item.Notes
+                };
+                _context.OrderDetails.Add(orderDetail);
+            }
             await _context.SaveChangesAsync();
 
             return order;
