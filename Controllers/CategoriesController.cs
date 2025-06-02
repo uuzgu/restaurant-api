@@ -32,15 +32,15 @@ namespace RestaurantApi.Controllers
                 // Define the desired order of categories
                 var orderedCategories = categories.OrderBy(c => c.id switch
                 {
-                    1 => 1,  // Pizza
-                    2 => 2,  // Bowl
-                    3 => 3,  // Cheeseburger
-                    4 => 4,  // Salad
-                    5 => 5,  // Breakfast
-                    6 => 6,  // Drinks
-                    7 => 7,  // Soup
-                    8 => 8,  // Dessert
-                    0 => 9,  // Promotions
+                    0 => 1,  // Promotions
+                    1 => 2,  // Pizza
+                    2 => 3,  // Bowl
+                    3 => 4,  // Cheeseburger
+                    4 => 5,  // Salad
+                    5 => 6,  // Breakfast
+                    6 => 7,  // Drinks
+                    7 => 8,  // Soup
+                    8 => 9,  // Dessert
                     _ => 10  // Any other categories
                 });
                 
