@@ -18,13 +18,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", builder =>
     {
-        builder.WithOrigins(
-                "http://localhost:3000",
-                "https://restaurant-ui.vercel.app",
-                "https://restaurant-ui-gules.vercel.app",
-                "https://restaurant-ui-git-main-utkus-projects-cabada99.vercel.app",
-                "https://restaurant-ui-utkus-projects-cabada99.vercel.app"
-            )
+        builder.SetIsOriginAllowed(origin => true) // Allow any origin
             .AllowAnyMethod()
             .AllowAnyHeader()
             .AllowCredentials();
