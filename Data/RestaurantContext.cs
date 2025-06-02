@@ -87,6 +87,7 @@ namespace RestaurantApi.Data
                 entity.Property(e => e.Description).HasColumnName("description");
                 entity.Property(e => e.ImageUrl).HasColumnName("image_url");
                 entity.Property(e => e.CategoryId).HasColumnName("category_id").IsRequired();
+                entity.Property(e => e.IsAvailable).HasColumnName("is_available").IsRequired().HasDefaultValue(true);
                 entity.HasOne(e => e.Category)
                     .WithMany(c => c.Items)
                     .HasForeignKey(e => e.CategoryId)
