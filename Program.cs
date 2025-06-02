@@ -21,11 +21,12 @@ builder.Services.AddCors(options =>
         var allowedOrigins = Environment.GetEnvironmentVariable("ALLOWED_ORIGINS")?.Split(',') 
             ?? new[] { 
                 "http://localhost:3000",
-                "https://restaurant-ui-utkus-projects-cabada99.vercel.app",
-                "https://restaurant-ui-git-main-utkus-projects-cabada99.vercel.app"
+                "https://restaurant-ui-gules.vercel.app",
+                "https://restaurant-ui-git-main-utkus-projects-cabada99.vercel.app",
+                "https://restaurant-42an5hv3m-utkus-projects-cabada99.vercel.app"
             };
         
-        builder.SetIsOriginAllowed(origin => allowedOrigins.Contains(origin))
+        builder.WithOrigins(allowedOrigins)
             .AllowAnyMethod()
             .AllowAnyHeader()
             .AllowCredentials();
