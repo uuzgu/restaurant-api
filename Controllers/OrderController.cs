@@ -132,7 +132,6 @@ namespace RestaurantApi.Controllers
         }
 
         [HttpPost("create-cash-order")]
-        [Route("create-cash-order")]
         public async Task<IActionResult> CreateCashOrder([FromBody] CreateCashOrderRequest request)
         {
             try

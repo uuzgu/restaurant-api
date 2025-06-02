@@ -26,13 +26,16 @@ builder.Services.AddCors(options =>
 });
 
 // Add services to the container.
-builder.Services.AddControllers()
-    .AddJsonOptions(options =>
-    {
-        options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
-        options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
-        options.JsonSerializerOptions.PropertyNamingPolicy = null;
-    });
+builder.Services.AddControllers(options =>
+{
+    options.EnableEndpointRouting = true;
+})
+.AddJsonOptions(options =>
+{
+    options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+    options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+    options.JsonSerializerOptions.PropertyNamingPolicy = null;
+});
 
 // Add response compression
 builder.Services.AddResponseCompression(options =>
@@ -87,6 +90,12 @@ app.UseHttpsRedirection();
 // Add authentication and authorization middleware
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Enable endpoint routing
+app.UseEndpoints(endpoints =>
+{
+    endpoints.MapControllers();
+});
 
 // Log all registered controllers and their routes
 var controllerTypes = app.Services.GetRequiredService<IEnumerable<Type>>()
