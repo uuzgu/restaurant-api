@@ -49,7 +49,7 @@ builder.Services.AddMemoryCache();
 // Add DbContext
 var connectionString = Environment.GetEnvironmentVariable("DATABASE_CONNECTION_STRING") 
     ?? (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Production"
-        ? "Data Source=/tmp/restaurant.db"
+        ? "Data Source=/app/App_Data/restaurant.db"
         : "Data Source=App_Data/restaurant.db");
 var logger = builder.Services.BuildServiceProvider().GetRequiredService<ILogger<Program>>();
 logger.LogInformation("Using connection string: {ConnectionString}", connectionString);
@@ -114,7 +114,9 @@ foreach (var controllerType in controllerTypes)
 }
 
 // Ensure App_Data directory exists and has proper permissions
-var appDataPath = Path.Combine(Directory.GetCurrentDirectory(), "App_Data");
+var appDataPath = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Production"
+    ? "/app/App_Data"
+    : Path.Combine(Directory.GetCurrentDirectory(), "App_Data");
 logger.LogInformation("App_Data path: {AppDataPath}", appDataPath);
 
 if (!Directory.Exists(appDataPath))
