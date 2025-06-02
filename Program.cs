@@ -22,7 +22,8 @@ builder.Services.AddCors(options =>
                 "http://localhost:3000",
                 "https://restaurant-ui.vercel.app",
                 "https://restaurant-ui-gules.vercel.app",
-                "https://restaurant-ui-git-main-utkus-projects-cabada99.vercel.app"
+                "https://restaurant-ui-git-main-utkus-projects-cabada99.vercel.app",
+                "https://restaurant-ui-utkus-projects-cabada99.vercel.app"
             )
             .AllowAnyMethod()
             .AllowAnyHeader()
@@ -203,15 +204,15 @@ using (var scope = app.Services.CreateScope())
                     {
                         // Seed categories
                         context.Categories.AddRange(
-                            new Category { Id = -1, Name = "Promotions" },
-                            new Category { Id = -2, Name = "Pizza" },
-                            new Category { Id = -3, Name = "Bowl" },
-                            new Category { Id = -4, Name = "Cheeseburger" },
-                            new Category { Id = -5, Name = "Salad" },
-                            new Category { Id = -6, Name = "Breakfast" },
-                            new Category { Id = -7, Name = "Drinks" },
-                            new Category { Id = -8, Name = "Soup" },
-                            new Category { Id = -9, Name = "Dessert" }
+                            new Category { Id = 0, Name = "Promotions" },
+                            new Category { Id = 1, Name = "Pizza" },
+                            new Category { Id = 2, Name = "Bowl" },
+                            new Category { Id = 3, Name = "Cheeseburger" },
+                            new Category { Id = 4, Name = "Salad" },
+                            new Category { Id = 5, Name = "Breakfast" },
+                            new Category { Id = 6, Name = "Drinks" },
+                            new Category { Id = 7, Name = "Soup" },
+                            new Category { Id = 8, Name = "Dessert" }
                         );
                         context.SaveChanges();
                         scopeLogger.LogInformation("Categories seeded successfully");
