@@ -84,8 +84,6 @@ namespace RestaurantApi.Controllers
                 _logger.LogInformation("Fetching options for item with ID: {Id}", id);
                 // Check if the item exists and include all related data
                 var item = await _context.Items
-                    .Include(i => i.ItemOffers)
-                        .ThenInclude(io => io.Offer)
                     .Include(i => i.ItemAllergens)
                     .Include(i => i.ItemSelectionGroups)
                         .ThenInclude(isg => isg.SelectionGroup)
@@ -106,22 +104,6 @@ namespace RestaurantApi.Controllers
                 // Create a new ItemOptions object with clean data
                 var itemOptions = new ItemOptions
                 {
-                    ItemOffers = item.ItemOffers.Select(io => new ItemOfferWithDetails
-                    {
-                        Id = io.Id,
-                        ItemId = io.ItemId,
-                        OfferId = io.OfferId,
-                        Offer = new Offer
-                        {
-                            Id = io.Offer.Id,
-                            Name = io.Offer.Name,
-                            Description = io.Offer.Description,
-                            DiscountPercentage = io.Offer.DiscountPercentage,
-                            StartDate = io.Offer.StartDate,
-                            EndDate = io.Offer.EndDate,
-                            IsActive = io.Offer.IsActive
-                        }
-                    }).ToList(),
                     SelectionGroups = item.ItemSelectionGroups.Select(isg => new SelectionGroupWithOptions
                     {
                         Id = isg.SelectionGroup.Id,
