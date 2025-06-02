@@ -25,7 +25,7 @@ builder.Services.AddCors(options =>
                 "https://restaurant-ui-git-main-utkus-projects-cabada99.vercel.app"
             };
         
-        builder.WithOrigins(allowedOrigins)
+        builder.SetIsOriginAllowed(origin => allowedOrigins.Contains(origin))
             .AllowAnyMethod()
             .AllowAnyHeader()
             .AllowCredentials();
