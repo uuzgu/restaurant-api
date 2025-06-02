@@ -8,6 +8,7 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace RestaurantApi.Controllers
 {
@@ -17,20 +18,28 @@ namespace RestaurantApi.Controllers
     {
         private readonly RestaurantContext _context;
         private readonly string _webhookSecret;
+        private readonly ILogger<StripeWebhookController> _logger;
         private const string CHECKOUT_SESSION_COMPLETED = "checkout.session.completed";
         private const string CHECKOUT_SESSION_EXPIRED = "checkout.session.expired";
 
-        public StripeWebhookController(RestaurantContext context, IConfiguration configuration)
+        public StripeWebhookController(RestaurantContext context, IConfiguration configuration, ILogger<StripeWebhookController> logger)
         {
             _context = context;
-            _webhookSecret = configuration["Stripe:WebhookSecret"];
+            _webhookSecret = configuration["Stripe:WebhookSecret"] ?? throw new ArgumentNullException(nameof(configuration), "Stripe:WebhookSecret is not configured");
+            _logger = logger;
         }
 
         [HttpPost("webhook")]
         public async Task<IActionResult> StripeWebhook()
         {
             var json = await new StreamReader(HttpContext.Request.Body).ReadToEndAsync();
-            var signature = Request.Headers["Stripe-Signature"];
+            var signature = Request.Headers["Stripe-Signature"].ToString();
+            
+            if (string.IsNullOrEmpty(signature))
+            {
+                _logger.LogWarning("No Stripe signature found in request headers");
+                return BadRequest("No Stripe signature found");
+            }
             
             try
             {
@@ -40,7 +49,7 @@ namespace RestaurantApi.Controllers
                     _webhookSecret
                 );
                 
-                Console.WriteLine($"Received Stripe event: {stripeEvent.Type}");
+                _logger.LogInformation("Received Stripe event: {EventType}", stripeEvent.Type);
 
                 switch (stripeEvent.Type)
                 {
@@ -48,29 +57,31 @@ namespace RestaurantApi.Controllers
                         var session = stripeEvent.Data.Object as Session;
                         if (session != null)
                         {
-                            Console.WriteLine($"Processing completed checkout session: {session.Id}");
-                            Console.WriteLine($"Session metadata: {string.Join(", ", session.Metadata.Select(kv => $"{kv.Key}={kv.Value}"))}");
+                            _logger.LogInformation("Processing completed checkout session: {SessionId}", session.Id);
+                            _logger.LogInformation("Session metadata: {Metadata}", 
+                                string.Join(", ", session.Metadata.Select(kv => $"{kv.Key}={kv.Value}")));
                             
-                            if (session.Metadata.TryGetValue("orderId", out string orderIdStr) && 
+                            if (session.Metadata.TryGetValue("orderId", out string? orderIdStr) && 
+                                !string.IsNullOrEmpty(orderIdStr) &&
                                 int.TryParse(orderIdStr, out int orderId))
                             {
-                                Console.WriteLine($"Found order ID in metadata: {orderId}");
+                                _logger.LogInformation("Found order ID in metadata: {OrderId}", orderId);
                                 var order = await _context.Orders.FindAsync(orderId);
                                 if (order != null)
                                 {
                                     order.Status = "paid";
                                     order.UpdatedAt = DateTime.UtcNow;
                                     await _context.SaveChangesAsync();
-                                    Console.WriteLine($"Order {order.OrderNumber} marked as paid");
+                                    _logger.LogInformation("Order {OrderNumber} marked as paid", order.OrderNumber);
                                 }
                                 else
                                 {
-                                    Console.WriteLine($"Order {orderId} not found in database");
+                                    _logger.LogWarning("Order {OrderId} not found in database", orderId);
                                 }
                             }
                             else
                             {
-                                Console.WriteLine("No order ID found in session metadata");
+                                _logger.LogWarning("No valid order ID found in session metadata");
                             }
                         }
                         break;
@@ -79,35 +90,37 @@ namespace RestaurantApi.Controllers
                         var expiredSession = stripeEvent.Data.Object as Session;
                         if (expiredSession != null)
                         {
-                            Console.WriteLine($"Processing expired checkout session: {expiredSession.Id}");
-                            Console.WriteLine($"Session metadata: {string.Join(", ", expiredSession.Metadata.Select(kv => $"{kv.Key}={kv.Value}"))}");
+                            _logger.LogInformation("Processing expired checkout session: {SessionId}", expiredSession.Id);
+                            _logger.LogInformation("Session metadata: {Metadata}", 
+                                string.Join(", ", expiredSession.Metadata.Select(kv => $"{kv.Key}={kv.Value}")));
                             
-                            if (expiredSession.Metadata.TryGetValue("orderId", out string expiredOrderIdStr) && 
+                            if (expiredSession.Metadata.TryGetValue("orderId", out string? expiredOrderIdStr) && 
+                                !string.IsNullOrEmpty(expiredOrderIdStr) &&
                                 int.TryParse(expiredOrderIdStr, out int expiredOrderId))
                             {
-                                Console.WriteLine($"Found order ID in metadata: {expiredOrderId}");
+                                _logger.LogInformation("Found order ID in metadata: {OrderId}", expiredOrderId);
                                 var order = await _context.Orders.FindAsync(expiredOrderId);
                                 if (order != null)
                                 {
                                     order.Status = "expired";
                                     order.UpdatedAt = DateTime.UtcNow;
                                     await _context.SaveChangesAsync();
-                                    Console.WriteLine($"Order {order.OrderNumber} marked as expired");
+                                    _logger.LogInformation("Order {OrderNumber} marked as expired", order.OrderNumber);
                                 }
                                 else
                                 {
-                                    Console.WriteLine($"Order {expiredOrderId} not found in database");
+                                    _logger.LogWarning("Order {OrderId} not found in database", expiredOrderId);
                                 }
                             }
                             else
                             {
-                                Console.WriteLine("No order ID found in session metadata");
+                                _logger.LogWarning("No valid order ID found in session metadata");
                             }
                         }
                         break;
 
                     default:
-                        Console.WriteLine($"Unhandled event type: {stripeEvent.Type}");
+                        _logger.LogWarning("Unhandled event type: {EventType}", stripeEvent.Type);
                         break;
                 }
 
@@ -115,12 +128,12 @@ namespace RestaurantApi.Controllers
             }
             catch (StripeException ex)
             {
-                Console.WriteLine($"Stripe error: {ex.Message}");
+                _logger.LogError(ex, "Stripe error");
                 return BadRequest();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error processing webhook: {ex.Message}");
+                _logger.LogError(ex, "Error processing webhook");
                 return StatusCode(500);
             }
         }

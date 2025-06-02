@@ -19,13 +19,6 @@ namespace RestaurantApi.Services
         {
             try
             {
-                // Migrate items
-                var items = await _context.Items.ToListAsync();
-                foreach (var item in items)
-                {
-                    item.IsAvailable = true;
-                }
-                
                 // Migrate selection options
                 var selectionOptions = await _context.SelectionOptions.ToListAsync();
                 foreach (var option in selectionOptions)

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using RestaurantApi.Data;
 using RestaurantApi.Models;
+using System.Text.Json;
 
 namespace RestaurantApi.Services
 {
@@ -64,25 +65,19 @@ namespace RestaurantApi.Services
             {
                 OrderNumber = GenerateOrderNumber(),
                 Status = status,
-                Total = totalAmount.ToString(),
+                Total = totalAmount,
                 PaymentMethod = paymentMethod,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
-                CustomerInfo = new CustomerOrderInfo
+                CustomerInfo = customerInfo != null ? new CustomerOrderInfo
                 {
                     FirstName = customerInfo.FirstName,
                     LastName = customerInfo.LastName,
                     Email = customerInfo.Email,
                     Phone = customerInfo.Phone,
                     Comment = customerInfo.Comment,
-                    CreateDate = DateTime.UtcNow,
-                    PostalCode = customerInfo.PostalCode,
-                    Street = customerInfo.Street,
-                    House = customerInfo.House,
-                    Stairs = customerInfo.Stairs,
-                    Door = customerInfo.Door,
-                    Bell = customerInfo.Bell
-                }
+                    CreateDate = DateTime.UtcNow
+                } : null
             };
 
             _context.Orders.Add(order);
@@ -94,10 +89,15 @@ namespace RestaurantApi.Services
                 var orderDetail = new OrderDetail
                 {
                     OrderId = order.Id,
-                    ItemId = item.Id,
-                    Quantity = item.Quantity,
-                    Price = item.Price,
-                    Notes = item.Notes
+                    ItemDetails = JsonSerializer.Serialize(new
+                    {
+                        ItemId = item.Id,
+                        Quantity = item.Quantity,
+                        Price = item.Price,
+                        Notes = item.Notes,
+                        SelectedOptions = item.SelectedOptions,
+                        SelectedItems = item.SelectedItems
+                    })
                 };
                 _context.OrderDetails.Add(orderDetail);
             }

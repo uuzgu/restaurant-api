@@ -18,7 +18,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", builder =>
     {
-        builder.SetIsOriginAllowed(origin => true) // Allow any origin
+        var allowedOrigins = Environment.GetEnvironmentVariable("ALLOWED_ORIGINS")?.Split(',') 
+            ?? new[] { "http://localhost:3000" }; // Default to localhost in development
+        
+        builder.WithOrigins(allowedOrigins)
             .AllowAnyMethod()
             .AllowAnyHeader()
             .AllowCredentials();
@@ -51,8 +54,6 @@ var connectionString = Environment.GetEnvironmentVariable("DATABASE_CONNECTION_S
     ?? (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Production"
         ? "Data Source=/app/App_Data/restaurant.db"
         : "Data Source=App_Data/restaurant.db");
-var logger = builder.Services.BuildServiceProvider().GetRequiredService<ILogger<Program>>();
-logger.LogInformation("Using connection string: {ConnectionString}", connectionString);
 
 builder.Services.AddDbContext<RestaurantContext>(options =>
 {
@@ -78,11 +79,19 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+// Add security headers
+app.Use(async (context, next) =>
+{
+    context.Response.Headers.Append("X-Content-Type-Options", "nosniff");
+    context.Response.Headers.Append("X-Frame-Options", "DENY");
+    context.Response.Headers.Append("X-XSS-Protection", "1; mode=block");
+    context.Response.Headers.Append("Referrer-Policy", "strict-origin-when-cross-origin");
+    context.Response.Headers.Append("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';");
+    await next();
+});
+
 // Use CORS before other middleware
 app.UseCors("AllowAll");
-
-// Add routing middleware
-app.UseRouting();
 
 // Configure HTTPS redirection
 app.UseHttpsRedirection();
@@ -91,16 +100,11 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Enable endpoint routing
-app.UseEndpoints(endpoints =>
-{
-    endpoints.MapControllers();
-    endpoints.MapControllerRoute(
-        name: "api",
-        pattern: "api/{controller}/{action=Index}/{id?}");
-});
+// Map controllers
+app.MapControllers();
 
 // Log all registered controllers and their routes
+var logger = app.Services.GetRequiredService<ILogger<Program>>();
 var controllerTypes = app.Services.GetRequiredService<IEnumerable<Type>>()
     .Where(t => t.IsClass && !t.IsAbstract && typeof(ControllerBase).IsAssignableFrom(t));
 
@@ -200,31 +204,17 @@ using (var scope = app.Services.CreateScope())
                 var finalItemCount = context.Items.Count();
                 scopeLogger.LogInformation("Final database state - Categories: {CategoryCount}, Items: {ItemCount}", 
                     finalCategoryCount, finalItemCount);
-
-                // Log sample data for verification
-                var sampleCategories = context.Categories.Take(3).ToList();
-                var sampleItems = context.Items.Take(3).ToList();
-                scopeLogger.LogInformation("Sample Categories: {Categories}", 
-                    string.Join(", ", sampleCategories.Select(c => $"{c.Id}: {c.Name}")));
-                scopeLogger.LogInformation("Sample Items: {Items}", 
-                    string.Join(", ", sampleItems.Select(i => $"{i.Id}: {i.Name} (Category: {i.CategoryId})")));
-            }
-            else
-            {
-                scopeLogger.LogError("Could not connect to the database");
             }
         }
         catch (Exception ex)
         {
-            scopeLogger.LogError(ex, "An error occurred during database initialization");
-            throw;
+            scopeLogger.LogError(ex, "Error verifying database connection and data");
         }
     }
     catch (Exception ex)
     {
         var scopeLogger = services.GetRequiredService<ILogger<Program>>();
         scopeLogger.LogError(ex, "An error occurred while initializing the database");
-        // Don't throw the exception, allow the application to start even if database initialization fails
     }
 }
 

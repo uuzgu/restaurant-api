@@ -7,6 +7,8 @@ namespace RestaurantApi.Models
     [Table("coupons_history")]
     public class CouponHistory
     {
+        [Key]
+        [Column("id")]
         public int Id { get; set; }
 
         [Required]
@@ -16,9 +18,10 @@ namespace RestaurantApi.Models
         [ForeignKey("CouponId")]
         public Coupon Coupon { get; set; }
 
+        [Column("email")]
         public string? Email { get; set; }
 
         [Column("used_at")]
-        public string? UsedAt { get; set; } = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+        public DateTime? UsedAt { get; set; } = DateTime.UtcNow;
     }
 } 

@@ -40,37 +40,16 @@ namespace RestaurantApi.Models
         public string? StripeSessionId { get; set; }
 
         [Required]
-        [Column("total")]
-        public string Total { get; set; }
+        [Column("total", TypeName = "decimal(18,2)")]
+        public decimal Total { get; set; }
 
         [Required]
         [Column("updated_at")]
         public DateTime UpdatedAt { get; set; }
 
-        [Column("user_id")]
-        public int? UserId { get; set; }
-
         // Navigation properties
         public virtual CustomerOrderInfo? CustomerInfo { get; set; }
         public virtual ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
-    }
-
-    [Table("order_details")]
-    public class OrderDetails
-    {
-        [Key]
-        [Column("id")]
-        public int Id { get; set; }
-
-        [Required]
-        [Column("order_id")]
-        public int OrderId { get; set; }
-
-        [Required]
-        [Column("item_details")]
-        public string ItemDetails { get; set; }
-
-        // Navigation property
-        public virtual Order Order { get; set; }
+        public virtual DeliveryAddress? DeliveryAddress { get; set; }
     }
 } 

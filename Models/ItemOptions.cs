@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace RestaurantApi.Models
 {
@@ -15,14 +16,16 @@ namespace RestaurantApi.Models
         public int Id { get; set; }
         public int ItemId { get; set; }
         public int OfferId { get; set; }
-        public Offer Offer { get; set; }
+        public Offer Offer { get; set; } = null!;
     }
 
     public class SelectionGroupWithOptions
     {
         public int Id { get; set; }
-        public string Name { get; set; }
-        public string Type { get; set; }
+        [Required]
+        public string Name { get; set; } = string.Empty;
+        [Required]
+        public string Type { get; set; } = string.Empty;
         public bool IsRequired { get; set; }
         public int MinSelect { get; set; }
         public int MaxSelect { get; set; }

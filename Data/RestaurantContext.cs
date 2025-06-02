@@ -51,6 +51,9 @@ namespace RestaurantApi.Data
                 entity.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
                 entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").IsRequired();
                 entity.Property(e => e.PaymentMethod).HasColumnName("payment_method").IsRequired();
+                entity.Property(e => e.OrderMethod).HasColumnName("order_method").IsRequired();
+                entity.Property(e => e.SpecialNotes).HasColumnName("special_notes");
+                entity.Property(e => e.StripeSessionId).HasColumnName("stripe_session_id");
                 entity.HasMany(e => e.OrderDetails)
                     .WithOne(d => d.Order)
                     .HasForeignKey(d => d.OrderId)
@@ -63,18 +66,11 @@ namespace RestaurantApi.Data
                 entity.ToTable("order_details");
                 entity.HasKey(e => e.Id).HasName("id");
                 entity.Property(e => e.OrderId).HasColumnName("order_id").IsRequired();
-                entity.Property(e => e.ItemId).HasColumnName("item_id").IsRequired();
-                entity.Property(e => e.Quantity).HasColumnName("quantity").IsRequired();
-                entity.Property(e => e.Price).HasColumnName("price").IsRequired();
-                entity.Property(e => e.Notes).HasColumnName("notes");
+                entity.Property(e => e.ItemDetails).HasColumnName("item_details").IsRequired();
                 entity.HasOne(e => e.Order)
                     .WithMany(o => o.OrderDetails)
                     .HasForeignKey(e => e.OrderId)
                     .OnDelete(DeleteBehavior.Cascade);
-                entity.HasOne(e => e.Item)
-                    .WithMany()
-                    .HasForeignKey(e => e.ItemId)
-                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             // Configure Item entity
@@ -87,7 +83,6 @@ namespace RestaurantApi.Data
                 entity.Property(e => e.Description).HasColumnName("description");
                 entity.Property(e => e.ImageUrl).HasColumnName("image_url");
                 entity.Property(e => e.CategoryId).HasColumnName("category_id").IsRequired();
-                entity.Property(e => e.IsAvailable).HasColumnName("is_available").IsRequired().HasDefaultValue(true);
                 entity.HasOne(e => e.Category)
                     .WithMany(c => c.Items)
                     .HasForeignKey(e => e.CategoryId)
@@ -139,21 +134,14 @@ namespace RestaurantApi.Data
             // Configure CustomerOrderInfo entity
             modelBuilder.Entity<CustomerOrderInfo>(entity =>
             {
-                entity.ToTable("customerOrder_info");
+                entity.ToTable("customer_order_info");
                 entity.HasKey(e => e.Id).HasName("id");
                 entity.Property(e => e.FirstName).HasColumnName("first_name").IsRequired();
                 entity.Property(e => e.LastName).HasColumnName("last_name").IsRequired();
                 entity.Property(e => e.Email).HasColumnName("email").IsRequired();
                 entity.Property(e => e.Phone).HasColumnName("phone");
-                entity.Property(e => e.PostalCode).HasColumnName("postal_code");
-                entity.Property(e => e.Street).HasColumnName("street");
-                entity.Property(e => e.House).HasColumnName("house");
-                entity.Property(e => e.Stairs).HasColumnName("stairs");
-                entity.Property(e => e.Stick).HasColumnName("stick");
-                entity.Property(e => e.Door).HasColumnName("door");
-                entity.Property(e => e.Bell).HasColumnName("bell");
                 entity.Property(e => e.Comment).HasColumnName("comment");
-                entity.Property(e => e.CreateDate).HasColumnName("create_date");
+                entity.Property(e => e.CreateDate).HasColumnName("create_date").IsRequired();
             });
 
             // Seed Offers
@@ -280,7 +268,7 @@ namespace RestaurantApi.Data
             modelBuilder.Entity<DeliveryAddress>(entity =>
             {
                 entity.ToTable("delivery_addresses");
-                entity.HasKey(e => e.Id);
+                entity.HasKey(e => e.Id).HasName("id");
                 entity.Property(e => e.PostcodeId).HasColumnName("postcode_id").IsRequired();
                 entity.Property(e => e.Street).HasColumnName("street").IsRequired();
                 entity.Property(e => e.House).HasColumnName("house");
@@ -288,20 +276,35 @@ namespace RestaurantApi.Data
                 entity.Property(e => e.Stick).HasColumnName("stick");
                 entity.Property(e => e.Door).HasColumnName("door");
                 entity.Property(e => e.Bell).HasColumnName("bell");
-                
+
                 entity.HasOne(e => e.Postcode)
                     .WithMany(p => p.DeliveryAddresses)
                     .HasForeignKey(e => e.PostcodeId)
-                    .OnDelete(DeleteBehavior.Cascade);
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.CustomerInfo)
+                    .WithMany(c => c.DeliveryAddresses)
+                    .HasForeignKey("customer_info_id")
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Order)
+                    .WithOne(o => o.DeliveryAddress)
+                    .HasForeignKey<Order>("delivery_address_id")
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             // Configure PostcodeMinimumOrder entity
             modelBuilder.Entity<PostcodeMinimumOrder>(entity =>
             {
-                entity.ToTable("PostcodeMinimumOrders");
-                entity.HasKey(e => e.Id);
-                entity.Property(e => e.Postcode).HasColumnName("Postcode").IsRequired();
-                entity.Property(e => e.MinimumOrderValue).HasColumnName("MinimumOrderValue").IsRequired();
+                entity.ToTable("postcode_minimum_orders");
+                entity.HasKey(e => e.Id).HasName("id");
+                entity.Property(e => e.Postcode).HasColumnName("postcode").IsRequired();
+                entity.Property(e => e.MinimumOrderValue).HasColumnName("minimum_order_value").IsRequired().HasColumnType("decimal(18,2)");
+
+                entity.HasOne(e => e.PostcodeInfo)
+                    .WithOne(p => p.MinimumOrder)
+                    .HasForeignKey<Postcode>("minimum_order_id")
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             modelBuilder.Entity<SelectionGroup>()

@@ -3,9 +3,11 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace RestaurantApi.Models
 {
+    [Table("category_selection_groups")]
     public class CategorySelectionGroup
     {
         [Key]
+        [Column("id")]
         public int Id { get; set; }
 
         [Required]

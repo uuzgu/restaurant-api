@@ -7,6 +7,8 @@ namespace RestaurantApi.Models
     [Table("coupon_schedule")]
     public class CouponSchedule
     {
+        [Key]
+        [Column("id")]
         public int Id { get; set; }
 
         [Required]
@@ -18,44 +20,46 @@ namespace RestaurantApi.Models
 
         [Required]
         [Column("monday")]
-        public int Monday { get; set; }
+        public bool Monday { get; set; }
 
         [Required]
         [Column("tuesday")]
-        public int Tuesday { get; set; }
+        public bool Tuesday { get; set; }
 
         [Required]
         [Column("wednesday")]
-        public int Wednesday { get; set; }
+        public bool Wednesday { get; set; }
 
         [Required]
         [Column("thursday")]
-        public int Thursday { get; set; }
+        public bool Thursday { get; set; }
 
         [Required]
         [Column("friday")]
-        public int Friday { get; set; }
+        public bool Friday { get; set; }
 
         [Required]
         [Column("saturday")]
-        public int Saturday { get; set; }
+        public bool Saturday { get; set; }
 
         [Required]
         [Column("sunday")]
-        public int Sunday { get; set; }
+        public bool Sunday { get; set; }
 
         [Required]
         [Column("begin_time")]
-        public string BeginTime { get; set; }
+        public TimeSpan BeginTime { get; set; }
 
         [Required]
         [Column("end_time")]
-        public string EndTime { get; set; }
+        public TimeSpan EndTime { get; set; }
 
+        [Required]
         [Column("created_at")]
-        public string CreatedAt { get; set; } = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+        [Required]
         [Column("updated_at")]
-        public string UpdatedAt { get; set; } = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     }
 } 

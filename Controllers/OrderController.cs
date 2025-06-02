@@ -6,6 +6,7 @@ using RestaurantApi.Services;
 using Stripe;
 using System.Text.Json.Serialization;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 
 namespace RestaurantApi.Controllers
 {
@@ -34,9 +35,9 @@ namespace RestaurantApi.Controllers
                 // Validate required fields based on order method
                 if (request.OrderMethod.ToLower() == "delivery")
                 {
-                    if (string.IsNullOrEmpty(request.CustomerInfo.PostalCode) ||
-                        string.IsNullOrEmpty(request.CustomerInfo.Street) ||
-                        string.IsNullOrEmpty(request.CustomerInfo.House))
+                    if (string.IsNullOrEmpty(request.CustomerInfo?.PostalCode) ||
+                        string.IsNullOrEmpty(request.CustomerInfo?.Street) ||
+                        string.IsNullOrEmpty(request.CustomerInfo?.House))
                     {
                         return BadRequest(new { Error = "Postal code, street, and house number are required for delivery orders" });
                     }
@@ -47,7 +48,7 @@ namespace RestaurantApi.Controllers
                 {
                     OrderNumber = Guid.NewGuid().ToString("N").Substring(0, 8).ToUpper(),
                     Status = request.Status,
-                    Total = request.TotalAmount.ToString(),
+                    Total = request.TotalAmount,
                     PaymentMethod = request.PaymentMethod,
                     OrderMethod = request.OrderMethod,
                     SpecialNotes = request.SpecialNotes,
@@ -65,15 +66,33 @@ namespace RestaurantApi.Controllers
                         Email = request.CustomerInfo.Email,
                         Phone = request.CustomerInfo.Phone,
                         Comment = request.CustomerInfo.Comment,
-                        CreateDate = DateTime.UtcNow,
-                        PostalCode = request.OrderMethod.ToLower() == "delivery" ? request.CustomerInfo.PostalCode : null,
-                        Street = request.OrderMethod.ToLower() == "delivery" ? request.CustomerInfo.Street : null,
-                        House = request.OrderMethod.ToLower() == "delivery" ? request.CustomerInfo.House : null,
-                        Stairs = request.OrderMethod.ToLower() == "delivery" ? request.CustomerInfo.Stairs : null,
-                        Stick = request.OrderMethod.ToLower() == "delivery" ? request.CustomerInfo.Stick : null,
-                        Door = request.OrderMethod.ToLower() == "delivery" ? request.CustomerInfo.Door : null,
-                        Bell = request.OrderMethod.ToLower() == "delivery" ? request.CustomerInfo.Bell : null
+                        CreateDate = DateTime.UtcNow
                     };
+
+                    // Create delivery address if needed
+                    if (request.OrderMethod.ToLower() == "delivery" && !string.IsNullOrEmpty(request.CustomerInfo.PostalCode))
+                    {
+                        var postcode = await _context.Postcodes
+                            .FirstOrDefaultAsync(p => p.Code == request.CustomerInfo.PostalCode);
+
+                        if (postcode == null)
+                        {
+                            return BadRequest(new { Error = "Invalid postal code" });
+                        }
+
+                        var deliveryAddress = new DeliveryAddress
+                        {
+                            PostcodeId = postcode.Id,
+                            Street = request.CustomerInfo.Street ?? string.Empty,
+                            House = request.CustomerInfo.House,
+                            Stairs = request.CustomerInfo.Stairs,
+                            Stick = request.CustomerInfo.Stick,
+                            Door = request.CustomerInfo.Door,
+                            Bell = request.CustomerInfo.Bell
+                        };
+                        _context.DeliveryAddresses.Add(deliveryAddress);
+                        await _context.SaveChangesAsync();
+                    }
                 }
 
                 // Check for required options
@@ -89,7 +108,7 @@ namespace RestaurantApi.Controllers
                     {
                         foreach (var selectionGroup in itemWithOptions.ItemSelectionGroups.Select(isg => isg.SelectionGroup))
                         {
-                            if (selectionGroup.IsRequired == 1 && !selectionGroup.SelectionOptions.Any(o => item.SelectedOptions.Contains(o.Id)))
+                            if (selectionGroup.IsRequired && !selectionGroup.SelectionOptions.Any(o => item.SelectedOptions.Contains(o.Id)))
                             {
                                 return BadRequest(new { Error = $"Required option not selected for {itemWithOptions.Name} in {selectionGroup.Name}" });
                             }
@@ -106,10 +125,14 @@ namespace RestaurantApi.Controllers
                     var orderDetail = new OrderDetail
                     {
                         OrderId = order.Id,
-                        ItemId = item.Id,
-                        Quantity = item.Quantity,
-                        Price = item.Price,
-                        Notes = item.Notes
+                        ItemDetails = JsonSerializer.Serialize(new
+                        {
+                            ItemId = item.Id,
+                            Quantity = item.Quantity,
+                            Price = item.Price,
+                            Notes = item.Notes,
+                            SelectedOptions = item.SelectedOptions
+                        })
                     };
 
                     _context.OrderDetails.Add(orderDetail);
@@ -145,32 +168,52 @@ namespace RestaurantApi.Controllers
                     LastName = request.CustomerInfo.LastName,
                     Email = request.CustomerInfo.Email,
                     Phone = request.CustomerInfo.Phone,
-                    CreateDate = DateTime.UtcNow,
-                    PostalCode = request.CustomerInfo.PostalCode,
-                    Street = request.CustomerInfo.Street,
-                    House = request.CustomerInfo.House,
-                    Stairs = request.CustomerInfo.Stairs,
-                    Stick = request.CustomerInfo.Stick,
-                    Door = request.CustomerInfo.Door,
-                    Bell = request.CustomerInfo.Bell
+                    Comment = request.CustomerInfo.Comment,
+                    CreateDate = DateTime.UtcNow
                 };
                 _context.CustomerOrderInfos.Add(customerInfo);
                 await _context.SaveChangesAsync();
 
-                // Create order
-                var newOrder = new Order
+                // Create delivery address if needed
+                if (request.OrderMethod.ToLower() == "delivery" && !string.IsNullOrEmpty(request.CustomerInfo.PostalCode))
+                {
+                    var postcode = await _context.Postcodes
+                        .FirstOrDefaultAsync(p => p.Code == request.CustomerInfo.PostalCode);
+
+                    if (postcode == null)
+                    {
+                        return BadRequest(new { Error = "Invalid postal code" });
+                    }
+
+                    var deliveryAddress = new DeliveryAddress
+                    {
+                        PostcodeId = postcode.Id,
+                        Street = request.CustomerInfo.Street ?? string.Empty,
+                        House = request.CustomerInfo.House,
+                        Stairs = request.CustomerInfo.Stairs,
+                        Stick = request.CustomerInfo.Stick,
+                        Door = request.CustomerInfo.Door,
+                        Bell = request.CustomerInfo.Bell
+                    };
+                    _context.DeliveryAddresses.Add(deliveryAddress);
+                    await _context.SaveChangesAsync();
+                }
+
+                // Create the order
+                var order = new Order
                 {
                     OrderNumber = Guid.NewGuid().ToString("N").Substring(0, 8).ToUpper(),
-                    Status = "pending",
-                    Total = request.TotalAmount.ToString(),
-                    PaymentMethod = "cash",
+                    Status = request.Status,
+                    Total = request.TotalAmount,
+                    PaymentMethod = request.PaymentMethod,
                     OrderMethod = request.OrderMethod,
                     SpecialNotes = request.SpecialNotes,
-                    CustomerInfoId = customerInfo.Id,
+                    CustomerInfo = customerInfo,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 };
-                _context.Orders.Add(newOrder);
+
+                _context.Orders.Add(order);
                 await _context.SaveChangesAsync();
 
                 // Create order details
@@ -178,18 +221,22 @@ namespace RestaurantApi.Controllers
                 {
                     var orderDetail = new OrderDetail
                     {
-                        OrderId = newOrder.Id,
-                        ItemId = item.Id,
-                        Quantity = item.Quantity,
-                        Price = item.Price,
-                        Notes = item.Notes
+                        OrderId = order.Id,
+                        ItemDetails = JsonSerializer.Serialize(new
+                        {
+                            ItemId = item.Id,
+                            Quantity = item.Quantity,
+                            Price = item.Price,
+                            Notes = item.Notes,
+                            SelectedOptions = item.SelectedOptions
+                        })
                     };
 
                     _context.OrderDetails.Add(orderDetail);
                 }
                 await _context.SaveChangesAsync();
 
-                return Ok(new { OrderId = newOrder.Id, OrderNumber = newOrder.OrderNumber });
+                return Ok(new { OrderId = order.Id, OrderNumber = order.OrderNumber });
             }
             catch (Exception ex)
             {
@@ -206,7 +253,6 @@ namespace RestaurantApi.Controllers
                 var order = await _context.Orders
                     .Include(o => o.CustomerInfo)
                     .Include(o => o.OrderDetails)
-                        .ThenInclude(od => od.Item)
                     .FirstOrDefaultAsync(o => o.Id == id);
 
                 if (order == null)
@@ -227,71 +273,78 @@ namespace RestaurantApi.Controllers
     public class CreateOrderRequest
     {
         [Required]
-        [JsonPropertyName("orderMethod")]
-        public string OrderMethod { get; set; }
+        public string Status { get; set; } = string.Empty;
 
         [Required]
-        [JsonPropertyName("paymentMethod")]
-        public string PaymentMethod { get; set; }
-
-        [Required]
-        [JsonPropertyName("status")]
-        public string Status { get; set; }
-
-        [Required]
-        [JsonPropertyName("totalAmount")]
         public decimal TotalAmount { get; set; }
+
+        [Required]
+        public string PaymentMethod { get; set; } = string.Empty;
+
+        [Required]
+        public string OrderMethod { get; set; } = string.Empty;
 
         [JsonPropertyName("specialNotes")]
         public string? SpecialNotes { get; set; }
 
         [Required]
-        [JsonPropertyName("customerInfo")]
-        public CustomerInfoRequest CustomerInfo { get; set; }
+        public List<OrderItemRequest> Items { get; set; } = new();
 
         [Required]
-        [JsonPropertyName("items")]
-        public List<OrderItemRequest> Items { get; set; }
+        public CustomerInfoRequest CustomerInfo { get; set; } = new();
     }
 
     public class CreateCashOrderRequest
     {
         [Required]
-        [JsonPropertyName("orderMethod")]
-        public string OrderMethod { get; set; }
+        public string Status { get; set; } = string.Empty;
 
         [Required]
-        [JsonPropertyName("totalAmount")]
         public decimal TotalAmount { get; set; }
 
         [JsonPropertyName("specialNotes")]
         public string? SpecialNotes { get; set; }
 
         [Required]
-        [JsonPropertyName("customerInfo")]
-        public CustomerInfoRequest CustomerInfo { get; set; }
+        public string OrderMethod { get; set; } = string.Empty;
 
         [Required]
-        [JsonPropertyName("items")]
-        public List<OrderItemRequest> Items { get; set; }
+        public string PaymentMethod { get; set; } = string.Empty;
+
+        [Required]
+        public List<OrderItemRequest> Items { get; set; } = new();
+
+        [Required]
+        public CustomerInfoRequest CustomerInfo { get; set; } = new();
     }
 
     public class CustomerInfoRequest
     {
         [Required]
-        public string FirstName { get; set; }
+        public string FirstName { get; set; } = string.Empty;
+
         [Required]
-        public string LastName { get; set; }
+        public string LastName { get; set; } = string.Empty;
+
         [Required]
-        public string Email { get; set; }
+        public string Email { get; set; } = string.Empty;
+
         public string? Phone { get; set; }
+
         public string? PostalCode { get; set; }
+
         public string? Street { get; set; }
+
         public string? House { get; set; }
+
         public string? Stairs { get; set; }
+
         public string? Stick { get; set; }
+
         public string? Door { get; set; }
+
         public string? Bell { get; set; }
+
         public string? Comment { get; set; }
     }
 
@@ -299,22 +352,31 @@ namespace RestaurantApi.Controllers
     {
         [Required]
         public int Id { get; set; }
+
         [Required]
-        public string Name { get; set; }
+        public string Name { get; set; } = string.Empty;
+
         [Required]
         public int Quantity { get; set; }
+
         [Required]
         public decimal Price { get; set; }
+
         public string? Notes { get; set; }
-        public List<int> SelectedOptions { get; set; } = new List<int>();
+
+        public List<int> SelectedOptions { get; set; } = new();
+
         public List<SelectedItemRequest>? SelectedItems { get; set; }
     }
 
     public class SelectedItemRequest
     {
         public int Id { get; set; }
-        public string Name { get; set; }
+
+        public string Name { get; set; } = string.Empty;
+
         public int Quantity { get; set; }
+
         public decimal Price { get; set; }
     }
 } 

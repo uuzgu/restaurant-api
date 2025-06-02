@@ -24,14 +24,18 @@ namespace RestaurantApi.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Coupon>>> GetCoupons()
         {
-            return await _context.Coupons.ToListAsync();
+            return await _context.Coupons
+                .Include(c => c.Schedules)
+                .ToListAsync();
         }
 
         // GET: api/Coupons/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Coupon>> GetCoupon(int id)
         {
-            var coupon = await _context.Coupons.FindAsync(id);
+            var coupon = await _context.Coupons
+                .Include(c => c.Schedules)
+                .FirstOrDefaultAsync(c => c.Id == id);
 
             if (coupon == null)
             {
@@ -57,20 +61,14 @@ namespace RestaurantApi.Controllers
             }
 
             // Validate dates for periodic coupons
-            if (coupon.IsPeriodic == 1)
+            if (coupon.IsPeriodic)
             {
-                if (string.IsNullOrEmpty(coupon.StartDate) || string.IsNullOrEmpty(coupon.EndDate))
+                if (coupon.StartDate == null || coupon.EndDate == null)
                 {
                     return BadRequest("Start date and end date are required for periodic coupons");
                 }
 
-                if (!DateTime.TryParse(coupon.StartDate, out DateTime startDate) || 
-                    !DateTime.TryParse(coupon.EndDate, out DateTime endDate))
-                {
-                    return BadRequest("Invalid date format");
-                }
-
-                if (startDate >= endDate)
+                if (coupon.StartDate >= coupon.EndDate)
                 {
                     return BadRequest("Start date must be before end date");
                 }
@@ -91,7 +89,10 @@ namespace RestaurantApi.Controllers
                 return BadRequest();
             }
 
-            var existingCoupon = await _context.Coupons.FindAsync(id);
+            var existingCoupon = await _context.Coupons
+                .Include(c => c.Schedules)
+                .FirstOrDefaultAsync(c => c.Id == id);
+
             if (existingCoupon == null)
             {
                 return NotFound();
@@ -107,20 +108,14 @@ namespace RestaurantApi.Controllers
             }
 
             // Validate dates for periodic coupons
-            if (coupon.IsPeriodic == 1)
+            if (coupon.IsPeriodic)
             {
-                if (string.IsNullOrEmpty(coupon.StartDate) || string.IsNullOrEmpty(coupon.EndDate))
+                if (coupon.StartDate == null || coupon.EndDate == null)
                 {
                     return BadRequest("Start date and end date are required for periodic coupons");
                 }
 
-                if (!DateTime.TryParse(coupon.StartDate, out DateTime startDate) || 
-                    !DateTime.TryParse(coupon.EndDate, out DateTime endDate))
-                {
-                    return BadRequest("Invalid date format");
-                }
-
-                if (startDate >= endDate)
+                if (coupon.StartDate >= coupon.EndDate)
                 {
                     return BadRequest("Start date must be before end date");
                 }
@@ -151,7 +146,10 @@ namespace RestaurantApi.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteCoupon(int id)
         {
-            var coupon = await _context.Coupons.FindAsync(id);
+            var coupon = await _context.Coupons
+                .Include(c => c.Schedules)
+                .FirstOrDefaultAsync(c => c.Id == id);
+
             if (coupon == null)
             {
                 return NotFound();
@@ -173,7 +171,7 @@ namespace RestaurantApi.Controllers
             }
 
             var coupon = await _context.Coupons
-                .Include(c => c.Schedule)
+                .Include(c => c.Schedules)
                 .FirstOrDefaultAsync(c => c.Code == request.Code);
 
             if (coupon == null)
@@ -181,40 +179,41 @@ namespace RestaurantApi.Controllers
                 return BadRequest("Coupon not found");
             }
 
-            if (coupon.Schedule == null)
+            if (!coupon.Schedules.Any())
             {
                 return BadRequest("Coupon schedule not found");
             }
 
             // 1. Check schedule validity
-            var currentDay = DateTime.Now.DayOfWeek;
-            var currentTime = DateTime.Now.TimeOfDay;
+            var currentDay = DateTime.UtcNow.DayOfWeek;
+            var currentTime = DateTime.UtcNow.TimeOfDay;
+            var schedule = coupon.Schedules.First();
+
             bool isDayValid = currentDay switch
             {
-                DayOfWeek.Monday => coupon.Schedule.Monday == 1,
-                DayOfWeek.Tuesday => coupon.Schedule.Tuesday == 1,
-                DayOfWeek.Wednesday => coupon.Schedule.Wednesday == 1,
-                DayOfWeek.Thursday => coupon.Schedule.Thursday == 1,
-                DayOfWeek.Friday => coupon.Schedule.Friday == 1,
-                DayOfWeek.Saturday => coupon.Schedule.Saturday == 1,
-                DayOfWeek.Sunday => coupon.Schedule.Sunday == 1,
+                DayOfWeek.Monday => schedule.Monday,
+                DayOfWeek.Tuesday => schedule.Tuesday,
+                DayOfWeek.Wednesday => schedule.Wednesday,
+                DayOfWeek.Thursday => schedule.Thursday,
+                DayOfWeek.Friday => schedule.Friday,
+                DayOfWeek.Saturday => schedule.Saturday,
+                DayOfWeek.Sunday => schedule.Sunday,
                 _ => false
             };
+
             if (!isDayValid)
             {
                 return BadRequest("Coupon is not valid for today");
             }
 
-            var beginTime = TimeSpan.Parse(coupon.Schedule.BeginTime);
-            var endTime = TimeSpan.Parse(coupon.Schedule.EndTime);
-            if (currentTime < beginTime || currentTime > endTime)
+            if (currentTime < schedule.BeginTime || currentTime > schedule.EndTime)
             {
-                return BadRequest($"Coupon is only valid between {beginTime:hh\\:mm} and {endTime:hh\\:mm}");
+                return BadRequest($"Coupon is only valid between {schedule.BeginTime:hh\\:mm} and {schedule.EndTime:hh\\:mm}");
             }
 
             // 2. Check general validity
             // (a) One-time coupon: check if used
-            if (coupon.IsPeriodic == 0)
+            if (!coupon.IsPeriodic)
             {
                 var isUsed = await _context.CouponHistory.AnyAsync(ch => ch.CouponId == coupon.Id);
                 if (isUsed)
@@ -223,25 +222,21 @@ namespace RestaurantApi.Controllers
                 }
             }
             // (b) Periodic: check date range
-            if (coupon.IsPeriodic == 1)
+            if (coupon.IsPeriodic)
             {
-                if (string.IsNullOrEmpty(coupon.StartDate) || string.IsNullOrEmpty(coupon.EndDate))
+                if (coupon.StartDate == null || coupon.EndDate == null)
                 {
                     return BadRequest("Start date and end date are required for periodic coupons");
                 }
-                if (!DateTime.TryParse(coupon.StartDate, out DateTime startDate) ||
-                    !DateTime.TryParse(coupon.EndDate, out DateTime endDate))
-                {
-                    return BadRequest("Invalid coupon date format");
-                }
-                var currentDate = DateTime.Now;
-                if (currentDate < startDate || currentDate > endDate)
+
+                var currentDate = DateTime.UtcNow;
+                if (currentDate < coupon.StartDate || currentDate > coupon.EndDate)
                 {
                     return BadRequest("Coupon is not valid for current date");
                 }
             }
             // (c) One-time: check email
-            if (coupon.IsPeriodic == 0 && !string.IsNullOrEmpty(coupon.Email))
+            if (!coupon.IsPeriodic && !string.IsNullOrEmpty(coupon.Email))
             {
                 if (string.IsNullOrEmpty(request.Email))
                 {
@@ -249,40 +244,11 @@ namespace RestaurantApi.Controllers
                 }
                 if (coupon.Email.ToLower() != request.Email.ToLower())
                 {
-                    return BadRequest("Coupon is not valid for this email");
+                    return BadRequest("Invalid email for this coupon");
                 }
             }
 
-            // 3. Success
-            return Ok(new
-            {
-                isValid = true,
-                coupon.Id,
-                coupon.Code,
-                coupon.Type,
-                coupon.IsPeriodic,
-                coupon.StartDate,
-                coupon.EndDate,
-                coupon.Email,
-                coupon.IsUsed,
-                coupon.CreatedAt,
-                coupon.DiscountRatio,
-                schedule = new
-                {
-                    beginTime = coupon.Schedule.BeginTime,
-                    endTime = coupon.Schedule.EndTime,
-                    validDays = new
-                    {
-                        monday = coupon.Schedule.Monday == 1,
-                        tuesday = coupon.Schedule.Tuesday == 1,
-                        wednesday = coupon.Schedule.Wednesday == 1,
-                        thursday = coupon.Schedule.Thursday == 1,
-                        friday = coupon.Schedule.Friday == 1,
-                        saturday = coupon.Schedule.Saturday == 1,
-                        sunday = coupon.Schedule.Sunday == 1
-                    }
-                }
-            });
+            return Ok(new { IsValid = true });
         }
 
         // POST: api/Coupons/use
@@ -294,53 +260,54 @@ namespace RestaurantApi.Controllers
                 return BadRequest("Coupon code is required");
             }
 
-            var coupon = await _context.Coupons.FirstOrDefaultAsync(c => c.Code == request.Code);
+            var coupon = await _context.Coupons
+                .Include(c => c.Schedules)
+                .FirstOrDefaultAsync(c => c.Code == request.Code);
 
             if (coupon == null)
             {
-                return NotFound("Coupon not found");
+                return BadRequest("Coupon not found");
             }
 
-            // For one-time coupons, check if already used
-            if (coupon.IsPeriodic == 0)
+            // Validate the coupon
+            var validationResult = await ValidateCouponSchedule(new CouponValidationRequest 
+            { 
+                Code = request.Code,
+                Email = request.Email
+            });
+
+            if (validationResult is BadRequestObjectResult)
             {
-                var isUsed = await _context.CouponHistory
-                    .AnyAsync(ch => ch.CouponId == coupon.Id);
-
-                if (isUsed)
-                {
-                    return BadRequest("Coupon has already been used");
-                }
-
-                // Record the usage
-                var history = new CouponHistory
-                {
-                    CouponId = coupon.Id,
-                    Email = request.Email
-                };
-
-                _context.CouponHistory.Add(history);
-                await _context.SaveChangesAsync();
+                return validationResult;
             }
 
-            return Ok(coupon);
+            // Record coupon usage
+            var history = new CouponHistory
+            {
+                CouponId = coupon.Id,
+                Email = request.Email,
+                UsedAt = DateTime.UtcNow
+            };
+
+            _context.CouponHistory.Add(history);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { Message = "Coupon used successfully" });
         }
 
         // GET: api/Coupons/5/history
         [HttpGet("{id}/history")]
         public async Task<ActionResult<IEnumerable<CouponHistory>>> GetCouponHistory(int id)
         {
-            var coupon = await _context.Coupons.FindAsync(id);
-            if (coupon == null)
+            if (!CouponExists(id))
             {
                 return NotFound();
             }
 
-            var history = await _context.CouponHistory
+            return await _context.CouponHistory
                 .Where(ch => ch.CouponId == id)
+                .OrderByDescending(ch => ch.UsedAt)
                 .ToListAsync();
-
-            return history;
         }
 
         private bool CouponExists(int id)

@@ -11,23 +11,24 @@ namespace RestaurantApi.Models
         public int Id { get; set; }
 
         [Required]
-        [Column(TypeName = "nvarchar(100)")]
+        [Column("name")]
         public string Name { get; set; } = string.Empty;
 
         [Required]
-        [Column(TypeName = "nvarchar(50)")]
+        [Column("type")]
         public string Type { get; set; } = string.Empty;
 
         [Required]
         [Column("is_required")]
-        public int IsRequired { get; set; }
+        public bool IsRequired { get; set; }
 
         [Required]
         [Column("min_select")]
         public int MinSelect { get; set; }
 
+        [Required]
         [Column("max_select")]
-        public int? MaxSelect { get; set; }
+        public int MaxSelect { get; set; }
 
         [Required]
         [Column("threshold")]

@@ -7,24 +7,27 @@ namespace RestaurantApi.Models
     public class SelectionOption
     {
         [Key]
+        [Column("id")]
         public int Id { get; set; }
         
         [Required]
-        [Column(TypeName = "nvarchar(100)")]
+        [Column("name")]
         public string Name { get; set; } = string.Empty;
         
+        [Required]
         [Column("price")]
         public decimal Price { get; set; }
         
+        [Required]
         [Column("display_order")]
         public int DisplayOrder { get; set; }
         
+        [Required]
         [Column("selection_group_id")]
         public int SelectionGroupId { get; set; }
 
-        // Navigation properties
+        // Navigation property
         [ForeignKey("SelectionGroupId")]
         public virtual SelectionGroup SelectionGroup { get; set; } = null!;
-        public virtual ICollection<Selection> Selections { get; set; } = new List<Selection>();
     }
 } 

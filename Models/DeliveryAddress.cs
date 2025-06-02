@@ -3,9 +3,11 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace RestaurantApi.Models
 {
+    [Table("delivery_addresses")]
     public class DeliveryAddress
     {
         [Key]
+        [Column("id")]
         public int Id { get; set; }
 
         [Required]
@@ -31,8 +33,10 @@ namespace RestaurantApi.Models
         [Column("bell")]
         public string? Bell { get; set; }
 
-        // Navigation property
+        // Navigation properties
         [ForeignKey("PostcodeId")]
-        public Postcode Postcode { get; set; }
+        public virtual Postcode Postcode { get; set; } = null!;
+        public virtual CustomerOrderInfo? CustomerInfo { get; set; }
+        public virtual Order? Order { get; set; }
     }
 } 

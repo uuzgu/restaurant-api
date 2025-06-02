@@ -4,37 +4,47 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace RestaurantApi.Models
 {
+    [Table("coupons")]
     public class Coupon
     {
+        [Key]
+        [Column("id")]
         public int Id { get; set; }
 
         [Required]
+        [Column("code")]
         public string Code { get; set; }
 
         [Required]
+        [Column("type")]
         public string Type { get; set; }  // e.g., "PERCENTAGE", "FIXED_AMOUNT"
 
         [Required]
         [Column("is_periodic")]
-        public int IsPeriodic { get; set; }  // 1 for periodic, 0 for one-time use
+        public bool IsPeriodic { get; set; }
 
         [Column("start_date")]
-        public string? StartDate { get; set; }  // For periodic coupons
+        public DateTime? StartDate { get; set; }
 
         [Column("end_date")]
-        public string? EndDate { get; set; }  // For periodic coupons
+        public DateTime? EndDate { get; set; }
 
+        [Required]
         [Column("discount_ratio")]
-        public decimal DiscountRatio { get; set; }  // Discount percentage as decimal (e.g., 0.10 for 10%)
+        public decimal DiscountRatio { get; set; }
 
+        [Column("email")]
         public string? Email { get; set; }
 
+        [Required]
         [Column("is_used")]
-        public int IsUsed { get; set; }  // 1 for used, 0 for unused
+        public bool IsUsed { get; set; }
 
+        [Required]
         [Column("created_at")]
-        public string CreatedAt { get; set; } = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        public CouponSchedule Schedule { get; set; }
+        // Navigation property
+        public virtual ICollection<CouponSchedule> Schedules { get; set; } = new List<CouponSchedule>();
     }
 } 

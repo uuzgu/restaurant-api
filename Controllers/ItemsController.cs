@@ -29,6 +29,9 @@ namespace RestaurantApi.Controllers
                 var items = await _context.Items
                     .Include(i => i.Category)
                     .Include(i => i.ItemAllergens)
+                    .Include(i => i.ItemSelectionGroups)
+                        .ThenInclude(isg => isg.SelectionGroup)
+                            .ThenInclude(sg => sg.SelectionOptions)
                     .ToListAsync();
                 
                 _logger.LogInformation("Found {Count} items", items.Count);
@@ -51,34 +54,15 @@ namespace RestaurantApi.Controllers
                 var item = await _context.Items
                     .Include(i => i.Category)
                     .Include(i => i.ItemAllergens)
+                    .Include(i => i.ItemSelectionGroups)
+                        .ThenInclude(isg => isg.SelectionGroup)
+                            .ThenInclude(sg => sg.SelectionOptions)
                     .FirstOrDefaultAsync(i => i.Id == id);
                     
                 if (item == null)
                 {
                     _logger.LogWarning("Item with ID {Id} not found", id);
                     return NotFound();
-                }
-
-                if (item.SelectionOptions != null)
-                {
-                    foreach (var option in item.SelectionOptions)
-                    {
-                        option.DisplayOrder = option.DisplayOrder;
-                    }
-                }
-
-                if (item.ItemSelectionGroups != null)
-                {
-                    foreach (var group in item.ItemSelectionGroups)
-                    {
-                        if (group.SelectionGroup != null)
-                        {
-                            foreach (var option in group.SelectionGroup.SelectionOptions)
-                            {
-                                option.DisplayOrder = option.DisplayOrder;
-                            }
-                        }
-                    }
                 }
 
                 _logger.LogInformation("Found item: {Item}", item.Name);
@@ -143,9 +127,9 @@ namespace RestaurantApi.Controllers
                         Id = isg.SelectionGroup.Id,
                         Name = isg.SelectionGroup.Name,
                         Type = isg.SelectionGroup.Type,
-                        IsRequired = isg.SelectionGroup.IsRequired == 1,
+                        IsRequired = isg.SelectionGroup.IsRequired,
                         MinSelect = isg.SelectionGroup.MinSelect,
-                        MaxSelect = isg.SelectionGroup.MaxSelect ?? 0,
+                        MaxSelect = isg.SelectionGroup.MaxSelect,
                         Threshold = isg.SelectionGroup.Threshold,
                         DisplayOrder = isg.SelectionGroup.DisplayOrder,
                         Options = isg.SelectionGroup.SelectionOptions.Select(o => new SelectionOption
@@ -162,9 +146,9 @@ namespace RestaurantApi.Controllers
                         Id = csg.SelectionGroup.Id,
                         Name = csg.SelectionGroup.Name,
                         Type = csg.SelectionGroup.Type,
-                        IsRequired = csg.SelectionGroup.IsRequired == 1,
+                        IsRequired = csg.SelectionGroup.IsRequired,
                         MinSelect = csg.SelectionGroup.MinSelect,
-                        MaxSelect = csg.SelectionGroup.MaxSelect ?? 0,
+                        MaxSelect = csg.SelectionGroup.MaxSelect,
                         Threshold = csg.SelectionGroup.Threshold,
                         DisplayOrder = csg.SelectionGroup.DisplayOrder,
                         Options = csg.SelectionGroup.SelectionOptions.Select(o => new SelectionOption

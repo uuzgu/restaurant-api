@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json;
 
 namespace RestaurantApi.Models;
 
@@ -7,6 +8,7 @@ namespace RestaurantApi.Models;
 public class OrderDetail
 {
     [Key]
+    [Column("id")]
     public int Id { get; set; }
 
     [Required]
@@ -14,26 +16,17 @@ public class OrderDetail
     public int OrderId { get; set; }
 
     [Required]
-    [Column("item_id")]
-    public int ItemId { get; set; }
+    [Column("item_details")]
+    public string ItemDetails { get; set; }
 
-    [Required]
-    [Column("quantity")]
-    public int Quantity { get; set; }
+    [NotMapped]
+    public ItemOptions? ItemDetailsObject
+    {
+        get => string.IsNullOrEmpty(ItemDetails) ? null : JsonSerializer.Deserialize<ItemOptions>(ItemDetails);
+        set => ItemDetails = value == null ? string.Empty : JsonSerializer.Serialize(value);
+    }
 
-    [Required]
-    [Column("price")]
-    public decimal Price { get; set; }
-
-    [Column("notes")]
-    public string? Notes { get; set; }
-
-    // Navigation properties
+    // Navigation property
     [ForeignKey("OrderId")]
     public virtual Order Order { get; set; } = null!;
-
-    [ForeignKey("ItemId")]
-    public virtual Item Item { get; set; } = null!;
-
-    public virtual ICollection<Selection> Selections { get; set; } = new List<Selection>();
 } 

@@ -19,6 +19,12 @@ namespace RestaurantApi.Models
 
         [JsonPropertyName("selectedItems")]
         public List<SelectedItem>? SelectedItems { get; set; }
+
+        [JsonPropertyName("selectionGroups")]
+        public List<SelectionGroupWithOptions>? SelectionGroups { get; set; }
+
+        [JsonPropertyName("categorySelectionGroups")]
+        public List<SelectionGroupWithOptions>? CategorySelectionGroups { get; set; }
     }
 
     public class SelectedItem

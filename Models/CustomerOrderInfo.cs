@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace RestaurantApi.Models
 {
-    [Table("customerOrder_info")]
+    [Table("customer_order_info")]
     public class CustomerOrderInfo
     {
         [Key]
@@ -11,48 +11,29 @@ namespace RestaurantApi.Models
         public int Id { get; set; }
         
         [Required]
-        [Column("name")]
-        public string Name { get; set; } = string.Empty;
+        [Column("first_name")]
+        public string FirstName { get; set; } = string.Empty;
+        
+        [Required]
+        [Column("last_name")]
+        public string LastName { get; set; } = string.Empty;
         
         [Required]
         [Column("email")]
         public string Email { get; set; } = string.Empty;
         
-        [Required]
         [Column("phone")]
-        public string Phone { get; set; } = string.Empty;
+        public string? Phone { get; set; }
         
-        [Required]
-        [Column("address")]
-        public string Address { get; set; } = string.Empty;
-        
-        // Additional fields referenced in controllers
-        [Column("firstName")]
-        public string FirstName { get; set; } = string.Empty;
-        [Column("lastName")]
-        public string LastName { get; set; } = string.Empty;
         [Column("comment")]
-        public string Comment { get; set; } = string.Empty;
-        [Column("postalCode")]
-        public string PostalCode { get; set; } = string.Empty;
-        [Column("street")]
-        public string Street { get; set; } = string.Empty;
-        [Column("house")]
-        public string House { get; set; } = string.Empty;
-        [Column("stairs")]
-        public string Stairs { get; set; } = string.Empty;
-        [Column("stick")]
-        public string Stick { get; set; } = string.Empty;
-        [Column("door")]
-        public string Door { get; set; } = string.Empty;
-        [Column("bell")]
-        public string Bell { get; set; } = string.Empty;
+        public string? Comment { get; set; }
         
         [Required]
-        [Column("createDate")]
+        [Column("create_date")]
         public DateTime CreateDate { get; set; } = DateTime.UtcNow;
 
-        // Navigation property
+        // Navigation properties
         public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
+        public virtual ICollection<DeliveryAddress> DeliveryAddresses { get; set; } = new List<DeliveryAddress>();
     }
 } 
