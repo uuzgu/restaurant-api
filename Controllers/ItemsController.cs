@@ -101,10 +101,11 @@ namespace RestaurantApi.Controllers
                 }
 
                 _logger.LogInformation("Found item: {Item}", item.Name);
-                // Create a new ItemOptions object with clean data
-                var itemOptions = new ItemOptions
-                {
-                    SelectionGroups = item.ItemSelectionGroups.Select(isg => new SelectionGroupWithOptions
+
+                // Create item-specific selection groups
+                var itemSelectionGroups = item.ItemSelectionGroups
+                    .OrderBy(isg => isg.SelectionGroup.DisplayOrder)
+                    .Select(isg => new SelectionGroupWithOptions
                     {
                         Id = isg.SelectionGroup.Id,
                         Name = isg.SelectionGroup.Name,
@@ -114,16 +115,22 @@ namespace RestaurantApi.Controllers
                         MaxSelect = isg.SelectionGroup.MaxSelect,
                         Threshold = isg.SelectionGroup.Threshold,
                         DisplayOrder = isg.SelectionGroup.DisplayOrder,
-                        Options = isg.SelectionGroup.SelectionOptions.Select(o => new SelectionOption
-                        {
-                            Id = o.Id,
-                            Name = o.Name,
-                            Price = o.Price,
-                            DisplayOrder = o.DisplayOrder,
-                            SelectionGroupId = o.SelectionGroupId
-                        }).ToList()
-                    }).ToList(),
-                    CategorySelectionGroups = item.Category.CategorySelectionGroups.Select(csg => new SelectionGroupWithOptions
+                        Options = isg.SelectionGroup.SelectionOptions
+                            .OrderBy(o => o.DisplayOrder)
+                            .Select(o => new SelectionOption
+                            {
+                                Id = o.Id,
+                                Name = o.Name,
+                                Price = o.Price,
+                                DisplayOrder = o.DisplayOrder,
+                                SelectionGroupId = o.SelectionGroupId
+                            }).ToList()
+                    }).ToList();
+
+                // Create category-level selection groups
+                var categorySelectionGroups = item.Category.CategorySelectionGroups
+                    .OrderBy(csg => csg.SelectionGroup.DisplayOrder)
+                    .Select(csg => new SelectionGroupWithOptions
                     {
                         Id = csg.SelectionGroup.Id,
                         Name = csg.SelectionGroup.Name,
@@ -133,15 +140,23 @@ namespace RestaurantApi.Controllers
                         MaxSelect = csg.SelectionGroup.MaxSelect,
                         Threshold = csg.SelectionGroup.Threshold,
                         DisplayOrder = csg.SelectionGroup.DisplayOrder,
-                        Options = csg.SelectionGroup.SelectionOptions.Select(o => new SelectionOption
-                        {
-                            Id = o.Id,
-                            Name = o.Name,
-                            Price = o.Price,
-                            DisplayOrder = o.DisplayOrder,
-                            SelectionGroupId = o.SelectionGroupId
-                        }).ToList()
-                    }).ToList()
+                        Options = csg.SelectionGroup.SelectionOptions
+                            .OrderBy(o => o.DisplayOrder)
+                            .Select(o => new SelectionOption
+                            {
+                                Id = o.Id,
+                                Name = o.Name,
+                                Price = o.Price,
+                                DisplayOrder = o.DisplayOrder,
+                                SelectionGroupId = o.SelectionGroupId
+                            }).ToList()
+                    }).ToList();
+
+                // Create a new ItemOptions object with separate selection groups
+                var itemOptions = new ItemOptions
+                {
+                    SelectionGroups = itemSelectionGroups,
+                    CategorySelectionGroups = categorySelectionGroups
                 };
 
                 _logger.LogInformation("Successfully retrieved options for item: {Item}", item.Name);
