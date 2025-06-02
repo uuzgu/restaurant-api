@@ -95,6 +95,9 @@ app.UseAuthorization();
 app.UseEndpoints(endpoints =>
 {
     endpoints.MapControllers();
+    endpoints.MapControllerRoute(
+        name: "api",
+        pattern: "api/{controller}/{action=Index}/{id?}");
 });
 
 // Log all registered controllers and their routes
