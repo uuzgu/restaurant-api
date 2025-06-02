@@ -22,6 +22,9 @@ RUN mkdir -p /app/App_Data && \
 # Copy published files
 COPY --from=publish /app/publish .
 
+# Copy database file
+COPY App_Data/restaurant.db /app/App_Data/restaurant.db
+
 # Set environment variables
 ENV ASPNETCORE_URLS=http://+:${PORT:-8080}
 ENV ASPNETCORE_ENVIRONMENT=Production
