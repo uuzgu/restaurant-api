@@ -110,25 +110,6 @@ foreach (var controllerType in controllerTypes)
         controllerType.Name, route);
 }
 
-// Add explicit route configuration
-app.MapControllerRoute(
-    name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}");
-
-// Map API routes with explicit api prefix
-app.MapControllerRoute(
-    name: "api",
-    pattern: "api/{controller}/{action=Index}/{id?}");
-
-// Comment out MapControllers since we're using explicit routing
-// app.MapControllers();
-
-// Log the application startup
-logger.LogInformation("Application started. Environment: {Environment}", 
-    app.Environment.EnvironmentName);
-logger.LogInformation("Application is running at: {Url}", 
-    app.Urls.FirstOrDefault() ?? "No URL configured");
-
 // Ensure App_Data directory exists and has proper permissions
 var appDataPath = Path.Combine(Directory.GetCurrentDirectory(), "App_Data");
 logger.LogInformation("App_Data path: {AppDataPath}", appDataPath);
