@@ -1,4 +1,4 @@
-using System.Linq;
+using Microsoft.EntityFrameworkCore;
 using RestaurantApi.Data;
 using RestaurantApi.Models;
 
@@ -7,54 +7,39 @@ namespace RestaurantApi.Services
     public class DataMigrationService
     {
         private readonly RestaurantContext _context;
-        public DataMigrationService(RestaurantContext context)
+        private readonly ILogger<DataMigrationService> _logger;
+
+        public DataMigrationService(RestaurantContext context, ILogger<DataMigrationService> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
-        public void MigrateToSelectionGroups()
+        public async Task MigrateDataAsync()
         {
-            // Migrate Item Ingredients
-            var items = _context.Items.ToList();
-            foreach (var item in items)
+            try
             {
-                var ingredients = _context.ItemIngredients.Where(ii => ii.ItemId == item.Id).ToList();
-                if (ingredients.Any())
+                // Migrate items
+                var items = await _context.Items.ToListAsync();
+                foreach (var item in items)
                 {
-                    var group = new SelectionGroup
-                    {
-                        Name = "Ingredients",
-                        Type = "ingredient",
-                        IsRequired = false,
-                        MinSelect = 0,
-                        MaxSelect = ingredients.Count,
-                        Threshold = 0,
-                        DisplayOrder = 0
-                    };
-                    _context.SelectionGroups.Add(group);
-                    _context.SaveChanges();
-
-                    foreach (var ing in ingredients)
-                    {
-                        var option = new SelectionOption
-                        {
-                            Name = ing.Name,
-                            Price = ing.ExtraCost,
-                            DisplayOrder = 0,
-                            SelectionGroupId = group.Id
-                        };
-                        _context.SelectionOptions.Add(option);
-                    }
-                    _context.SaveChanges();
-
-                    var link = new ItemSelectionGroup
-                    {
-                        ItemId = item.Id,
-                        SelectionGroupId = group.Id
-                    };
-                    _context.ItemSelectionGroups.Add(link);
-                    _context.SaveChanges();
+                    item.IsAvailable = true;
                 }
+                
+                // Migrate selection options
+                var selectionOptions = await _context.SelectionOptions.ToListAsync();
+                foreach (var option in selectionOptions)
+                {
+                    option.DisplayOrder = 0;
+                }
+                
+                await _context.SaveChangesAsync();
+                _logger.LogInformation("Data migration completed successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during data migration");
+                throw;
             }
         }
     }

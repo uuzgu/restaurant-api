@@ -7,7 +7,7 @@ namespace RestaurantApi.Models
     public class ItemOffer
     {
         [Key]
-        [Column("Id")]
+        [Column("id")]
         public int Id { get; set; }
         
         [Column("item_id")]
@@ -17,7 +17,7 @@ namespace RestaurantApi.Models
         public int OfferId { get; set; }
 
         // Navigation properties
-        public Item? Item { get; set; }
-        public Offer? Offer { get; set; }
+        public virtual Item Item { get; set; }
+        public virtual Offer Offer { get; set; }
     }
 } 

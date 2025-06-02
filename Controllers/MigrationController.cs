@@ -1,23 +1,35 @@
 using Microsoft.AspNetCore.Mvc;
 using RestaurantApi.Services;
+using Microsoft.Extensions.Logging;
 
 namespace RestaurantApi.Controllers
 {
-    [ApiController]
     [Route("api/[controller]")]
+    [ApiController]
     public class MigrationController : ControllerBase
     {
         private readonly DataMigrationService _migrationService;
-        public MigrationController(DataMigrationService migrationService)
+        private readonly ILogger<MigrationController> _logger;
+
+        public MigrationController(DataMigrationService migrationService, ILogger<MigrationController> logger)
         {
             _migrationService = migrationService;
+            _logger = logger;
         }
 
-        [HttpPost("migrate-selection-groups")]
-        public IActionResult MigrateSelectionGroups()
+        [HttpPost("migrate")]
+        public async Task<IActionResult> MigrateData()
         {
-            _migrationService.MigrateToSelectionGroups();
-            return Ok("Migration completed!");
+            try
+            {
+                await _migrationService.MigrateDataAsync();
+                return Ok(new { Message = "Data migration completed successfully" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during data migration");
+                return StatusCode(500, new { Error = "An error occurred during data migration" });
+            }
         }
     }
 } 

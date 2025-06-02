@@ -7,28 +7,32 @@ namespace RestaurantApi.Models
     public class Offer
     {
         [Key]
-        [Column("Id")]
+        [Column("id")]
         public int Id { get; set; }
         
+        [Required]
         [Column("name")]
-        public string Name { get; set; } = string.Empty;
+        public string Name { get; set; }
         
         [Column("description")]
         public string? Description { get; set; }
         
         [Column("discount_percentage")]
-        public decimal DiscountPercentage { get; set; }
+        public decimal? DiscountPercentage { get; set; }
+        
+        [Column("discount_amount")]
+        public decimal? DiscountAmount { get; set; }
         
         [Column("start_date")]
-        public string StartDate { get; set; } = string.Empty;
+        public DateTime? StartDate { get; set; }
         
         [Column("end_date")]
-        public string EndDate { get; set; } = string.Empty;
+        public DateTime? EndDate { get; set; }
         
         [Column("is_active")]
         public bool IsActive { get; set; }
 
         // Navigation property
-        public ICollection<ItemOffer> ItemOffers { get; set; } = new List<ItemOffer>();
+        public virtual ICollection<ItemOffer> ItemOffers { get; set; }
     }
 } 

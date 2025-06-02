@@ -10,39 +10,49 @@ namespace RestaurantApi.Models
         [Column("id")]
         public int Id { get; set; }
 
-        [Column("order_number")]
-        public string OrderNumber { get; set; } = string.Empty;
-
-        [Column("status")]
-        public string Status { get; set; } = "pending";
-
-        [Column("total")]
-        public string Total { get; set; } = "0";
-
-        [Column("payment_method")]
-        public string PaymentMethod { get; set; } = "card";
-
-        [Column("order_method")]
-        public string OrderMethod { get; set; } = "delivery";
-
-        [Column("special_notes")]
-        public string? SpecialNotes { get; set; }
+        [Required]
+        [Column("created_at")]
+        public DateTime CreatedAt { get; set; }
 
         [Column("customer_info_id")]
         public int? CustomerInfoId { get; set; }
 
-        [Column("created_at")]
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        [Required]
+        [Column("order_method")]
+        public string OrderMethod { get; set; }
 
-        [Column("updated_at")]
-        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        [Required]
+        [Column("order_number")]
+        public string OrderNumber { get; set; }
+
+        [Required]
+        [Column("payment_method")]
+        public string PaymentMethod { get; set; }
+
+        [Column("special_notes")]
+        public string? SpecialNotes { get; set; }
+
+        [Required]
+        [Column("status")]
+        public string Status { get; set; }
 
         [Column("stripe_session_id")]
         public string? StripeSessionId { get; set; }
 
+        [Required]
+        [Column("total")]
+        public string Total { get; set; }
+
+        [Required]
+        [Column("updated_at")]
+        public DateTime UpdatedAt { get; set; }
+
+        [Column("user_id")]
+        public int? UserId { get; set; }
+
         // Navigation properties
-        public CustomerOrderInfo? CustomerInfo { get; set; }
-        public OrderDetails? OrderDetails { get; set; }
+        public virtual CustomerOrderInfo? CustomerInfo { get; set; }
+        public virtual OrderDetails? OrderDetails { get; set; }
     }
 
     [Table("order_details")]
@@ -52,13 +62,15 @@ namespace RestaurantApi.Models
         [Column("id")]
         public int Id { get; set; }
 
+        [Required]
         [Column("order_id")]
         public int OrderId { get; set; }
 
+        [Required]
         [Column("item_details")]
-        public string ItemDetails { get; set; } = string.Empty;
+        public string ItemDetails { get; set; }
 
         // Navigation property
-        public Order Order { get; set; } = null!;
+        public virtual Order Order { get; set; }
     }
 } 

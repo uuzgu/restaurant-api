@@ -186,62 +186,14 @@ using (var scope = app.Services.CreateScope())
 
                 if (categoryCount == 0)
                 {
-                    scopeLogger.LogInformation("Starting data seeding process");
-                    try
-                    {
-                        // Seed categories
-                        context.Categories.AddRange(
-                            new Category { Id = 0, Name = "Promotions" },
-                            new Category { Id = 1, Name = "Pizza" },
-                            new Category { Id = 2, Name = "Bowl" },
-                            new Category { Id = 3, Name = "Cheeseburger" },
-                            new Category { Id = 4, Name = "Salad" },
-                            new Category { Id = 5, Name = "Breakfast" },
-                            new Category { Id = 6, Name = "Drinks" },
-                            new Category { Id = 7, Name = "Soup" },
-                            new Category { Id = 8, Name = "Dessert" }
-                        );
-                        context.SaveChanges();
-                        scopeLogger.LogInformation("Categories seeded successfully");
-
-                        // Seed items
-                        context.Items.AddRange(
-                            new Item
-                            {
-                                Id = -1,
-                                Name = "Special Combo",
-                                Description = "Get a pizza and drink at a special price!",
-                                Price = 15.99m,
-                                CategoryId = -1,
-                                ImageUrl = "/images/categories/promotionsCategory.png"
-                            },
-                            new Item
-                            {
-                                Id = -2,
-                                Name = "Family Bundle",
-                                Description = "Perfect for the whole family - 2 pizzas and 4 drinks",
-                                Price = 29.99m,
-                                CategoryId = -1,
-                                ImageUrl = "/images/categories/promotionsCategory.png"
-                            },
-                            new Item { Id = 1, CategoryId = -7, Name = "Cola", Description = "Classic carbonated soft drink", Price = 4 },
-                            new Item { Id = 2, CategoryId = -5, Name = "Salad", Description = "Salad with fresh vegetables and cheese", ImageUrl = "https://restaurant-images33.s3.eu-north-1.amazonaws.com/salad.jpg", Price = 8 }
-                        );
-                        context.SaveChanges();
-                        scopeLogger.LogInformation("Items seeded successfully");
-                    }
-                    catch (Exception ex)
-                    {
-                        scopeLogger.LogError(ex, "Error during data seeding");
-                        throw;
-                    }
+                    scopeLogger.LogInformation("Database is empty, but we have existing data in the database file. Please ensure the database file is properly copied to App_Data directory.");
                 }
                 else
                 {
                     scopeLogger.LogInformation("Database already contains data, skipping seeding");
                 }
 
-                // Verify data after seeding
+                // Verify data
                 var finalCategoryCount = context.Categories.Count();
                 var finalItemCount = context.Items.Count();
                 scopeLogger.LogInformation("Final database state - Categories: {CategoryCount}, Items: {ItemCount}", 

@@ -11,10 +11,12 @@ namespace RestaurantApi.Controllers
     public class ItemsController : ControllerBase
     {
         private readonly RestaurantContext _context;
+        private readonly ILogger<ItemsController> _logger;
 
-        public ItemsController(RestaurantContext context)
+        public ItemsController(RestaurantContext context, ILogger<ItemsController> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         // GET: api/items
@@ -23,14 +25,18 @@ namespace RestaurantApi.Controllers
         {
             try
             {
+                _logger.LogInformation("Fetching all items");
                 var items = await _context.Items
                     .Include(i => i.Category)
                     .Include(i => i.ItemAllergens)
                     .ToListAsync();
+                
+                _logger.LogInformation("Found {Count} items", items.Count);
                 return Ok(items);
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error fetching items");
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
@@ -41,20 +47,46 @@ namespace RestaurantApi.Controllers
         {
             try
             {
+                _logger.LogInformation("Fetching item with ID: {Id}", id);
                 var item = await _context.Items
                     .Include(i => i.Category)
                     .Include(i => i.ItemAllergens)
                     .FirstOrDefaultAsync(i => i.Id == id);
                     
-            if (item == null)
-            {
-                return NotFound();
-            }
+                if (item == null)
+                {
+                    _logger.LogWarning("Item with ID {Id} not found", id);
+                    return NotFound();
+                }
 
-            return Ok(item);
+                if (item.SelectionOptions != null)
+                {
+                    foreach (var option in item.SelectionOptions)
+                    {
+                        option.DisplayOrder = option.DisplayOrder;
+                    }
+                }
+
+                if (item.ItemSelectionGroups != null)
+                {
+                    foreach (var group in item.ItemSelectionGroups)
+                    {
+                        if (group.SelectionGroup != null)
+                        {
+                            foreach (var option in group.SelectionGroup.SelectionOptions)
+                            {
+                                option.DisplayOrder = option.DisplayOrder;
+                            }
+                        }
+                    }
+                }
+
+                _logger.LogInformation("Found item: {Item}", item.Name);
+                return Ok(item);
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error fetching item with ID: {Id}", id);
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
@@ -65,6 +97,7 @@ namespace RestaurantApi.Controllers
         {
             try
             {
+                _logger.LogInformation("Fetching options for item with ID: {Id}", id);
                 // Check if the item exists and include all related data
                 var item = await _context.Items
                     .Include(i => i.ItemOffers)
@@ -72,18 +105,20 @@ namespace RestaurantApi.Controllers
                     .Include(i => i.ItemAllergens)
                     .Include(i => i.ItemSelectionGroups)
                         .ThenInclude(isg => isg.SelectionGroup)
-                            .ThenInclude(sg => sg.Options)
+                            .ThenInclude(sg => sg.SelectionOptions)
                     .Include(i => i.Category)
                         .ThenInclude(c => c.CategorySelectionGroups)
                             .ThenInclude(csg => csg.SelectionGroup)
-                                .ThenInclude(sg => sg.Options)
+                                .ThenInclude(sg => sg.SelectionOptions)
                     .FirstOrDefaultAsync(i => i.Id == id);
 
                 if (item == null)
                 {
+                    _logger.LogWarning("Item with ID {Id} not found", id);
                     return NotFound($"Item with ID {id} not found");
                 }
 
+                _logger.LogInformation("Found item: {Item}", item.Name);
                 // Create a new ItemOptions object with clean data
                 var itemOptions = new ItemOptions
                 {
@@ -108,12 +143,12 @@ namespace RestaurantApi.Controllers
                         Id = isg.SelectionGroup.Id,
                         Name = isg.SelectionGroup.Name,
                         Type = isg.SelectionGroup.Type,
-                        IsRequired = isg.SelectionGroup.IsRequired,
+                        IsRequired = isg.SelectionGroup.IsRequired == 1,
                         MinSelect = isg.SelectionGroup.MinSelect,
-                        MaxSelect = isg.SelectionGroup.MaxSelect,
+                        MaxSelect = isg.SelectionGroup.MaxSelect ?? 0,
                         Threshold = isg.SelectionGroup.Threshold,
                         DisplayOrder = isg.SelectionGroup.DisplayOrder,
-                        Options = isg.SelectionGroup.Options.Select(o => new SelectionOption
+                        Options = isg.SelectionGroup.SelectionOptions.Select(o => new SelectionOption
                         {
                             Id = o.Id,
                             Name = o.Name,
@@ -127,12 +162,12 @@ namespace RestaurantApi.Controllers
                         Id = csg.SelectionGroup.Id,
                         Name = csg.SelectionGroup.Name,
                         Type = csg.SelectionGroup.Type,
-                        IsRequired = csg.SelectionGroup.IsRequired,
+                        IsRequired = csg.SelectionGroup.IsRequired == 1,
                         MinSelect = csg.SelectionGroup.MinSelect,
-                        MaxSelect = csg.SelectionGroup.MaxSelect,
+                        MaxSelect = csg.SelectionGroup.MaxSelect ?? 0,
                         Threshold = csg.SelectionGroup.Threshold,
                         DisplayOrder = csg.SelectionGroup.DisplayOrder,
-                        Options = csg.SelectionGroup.Options.Select(o => new SelectionOption
+                        Options = csg.SelectionGroup.SelectionOptions.Select(o => new SelectionOption
                         {
                             Id = o.Id,
                             Name = o.Name,
@@ -143,10 +178,12 @@ namespace RestaurantApi.Controllers
                     }).ToList()
                 };
 
+                _logger.LogInformation("Successfully retrieved options for item: {Item}", item.Name);
                 return Ok(itemOptions);
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error fetching options for item with ID: {Id}", id);
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
@@ -157,6 +194,7 @@ namespace RestaurantApi.Controllers
         {
             try
             {
+                _logger.LogInformation("Fetching items grouped by type");
                 var itemsGroupedByType = await _context.Items
                     .Include(i => i.Category)
                     .GroupBy(item => item.Category.Name)
@@ -167,10 +205,12 @@ namespace RestaurantApi.Controllers
                     })
                     .ToListAsync();
 
+                _logger.LogInformation("Found {Count} item types", itemsGroupedByType.Count);
                 return Ok(itemsGroupedByType);
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error fetching items grouped by type");
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }

@@ -11,11 +11,12 @@ namespace RestaurantApi.Models
         [Column("id")]
         public int Id { get; set; }
         
+        [Required]
         [Column("name")]
-        public string Name { get; set; } = string.Empty;
+        public string Name { get; set; }
         
-        // Navigation property
-        public ICollection<Item> Items { get; set; } = new List<Item>();
-        public ICollection<CategorySelectionGroup> CategorySelectionGroups { get; set; }
+        // Navigation properties
+        public virtual ICollection<Item> Items { get; set; } = new List<Item>();
+        public virtual ICollection<CategorySelectionGroup> CategorySelectionGroups { get; set; } = new List<CategorySelectionGroup>();
     }
 } 

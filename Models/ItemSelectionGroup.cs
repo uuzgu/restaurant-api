@@ -3,9 +3,11 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace RestaurantApi.Models
 {
+    [Table("item_selection_groups")]
     public class ItemSelectionGroup
     {
         [Key]
+        [Column("id")]
         public int Id { get; set; }
 
         [Required]
@@ -17,10 +19,7 @@ namespace RestaurantApi.Models
         public int SelectionGroupId { get; set; }
 
         // Navigation properties
-        [ForeignKey("ItemId")]
-        public Item Item { get; set; }
-
-        [ForeignKey("SelectionGroupId")]
-        public SelectionGroup SelectionGroup { get; set; }
+        public virtual Item Item { get; set; }
+        public virtual SelectionGroup SelectionGroup { get; set; }
     }
 } 

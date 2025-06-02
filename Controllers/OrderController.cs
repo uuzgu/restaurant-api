@@ -82,14 +82,14 @@ namespace RestaurantApi.Controllers
                     var itemWithOptions = await _context.Items
                         .Include(i => i.ItemSelectionGroups)
                             .ThenInclude(isg => isg.SelectionGroup)
-                                .ThenInclude(sg => sg.Options)
+                                .ThenInclude(sg => sg.SelectionOptions)
                         .FirstOrDefaultAsync(i => i.Id == item.Id);
 
                     if (itemWithOptions != null)
                     {
                         foreach (var selectionGroup in itemWithOptions.ItemSelectionGroups.Select(isg => isg.SelectionGroup))
                         {
-                            if (selectionGroup.IsRequired && !selectionGroup.Options.Any(o => item.SelectedOptions.Contains(o.Id)))
+                            if (selectionGroup.IsRequired == 1 && !selectionGroup.SelectionOptions.Any(o => item.SelectedOptions.Contains(o.Id)))
                             {
                                 return BadRequest(new { Error = $"Required option not selected for {itemWithOptions.Name} in {selectionGroup.Name}" });
                             }
@@ -132,10 +132,13 @@ namespace RestaurantApi.Controllers
         }
 
         [HttpPost("create-cash-order")]
+        [Route("create-cash-order")]
         public async Task<IActionResult> CreateCashOrder([FromBody] CreateCashOrderRequest request)
         {
             try
             {
+                _logger.LogInformation("Received cash order request: {@Request}", request);
+                
                 if (request.Items == null || !request.Items.Any())
                 {
                     return BadRequest("No items in the order");
