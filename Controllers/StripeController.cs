@@ -202,18 +202,20 @@ namespace RestaurantApi.Controllers
             }
         }
 
+        [HttpGet("payment-cancel")]
         [HttpPost("payment-cancel")]
-        public async Task<ActionResult> HandlePaymentCancel([FromBody] PaymentSuccessRequest request)
+        public async Task<ActionResult> HandlePaymentCancel([FromQuery] string session_id, [FromBody] PaymentSuccessRequest? request = null)
         {
             try
             {
-                if (string.IsNullOrEmpty(request.SessionId))
+                var sessionId = session_id ?? request?.SessionId;
+                if (string.IsNullOrEmpty(sessionId))
                 {
                     return BadRequest("Session ID is required");
                 }
 
                 var service = new SessionService();
-                var session = await service.GetAsync(request.SessionId);
+                var session = await service.GetAsync(sessionId);
 
                 if (session == null)
                 {
