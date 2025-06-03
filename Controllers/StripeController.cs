@@ -130,8 +130,8 @@ namespace RestaurantApi.Controllers
                         Quantity = item.Quantity,
                     }).ToList(),
                     Mode = "payment",
-                    SuccessUrl = $"{frontendUrl}/payment/success?session_id={{CHECKOUT_SESSION_ID}}",
-                    CancelUrl = $"{frontendUrl}/payment/cancel?session_id={{CHECKOUT_SESSION_ID}}",
+                    SuccessUrl = $"{frontendUrl}/payment/success?session_id={{CHECKOUT_SESSION_ID}}&payment_method=stripe",
+                    CancelUrl = $"{frontendUrl}/payment/cancel?session_id={{CHECKOUT_SESSION_ID}}&payment_method=stripe",
                     CustomerEmail = request.CustomerInfo?.Email,
                     Metadata = new Dictionary<string, string>
                     {
