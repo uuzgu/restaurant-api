@@ -131,7 +131,7 @@ namespace RestaurantApi.Controllers
                     }).ToList(),
                     Mode = "payment",
                     SuccessUrl = $"{frontendUrl}/payment/success?session_id={{CHECKOUT_SESSION_ID}}",
-                    CancelUrl = $"{frontendUrl}/payment/cancel",
+                    CancelUrl = $"{frontendUrl}/payment/cancel?session_id={{CHECKOUT_SESSION_ID}}",
                     CustomerEmail = request.CustomerInfo?.Email,
                     Metadata = new Dictionary<string, string>
                     {
