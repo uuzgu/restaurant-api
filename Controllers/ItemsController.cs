@@ -152,11 +152,17 @@ namespace RestaurantApi.Controllers
                             }).ToList()
                     }).ToList();
 
-                // Create a new ItemOptions object with separate selection groups
+                // Combine both lists, preferring item-specific groups over category groups
+                var combinedGroups = itemSelectionGroups
+                    .Concat(categorySelectionGroups.Where(cg => !itemSelectionGroups.Any(ig => ig.Id == cg.Id)))
+                    .OrderBy(g => g.DisplayOrder)
+                    .ToList();
+
+                // Create a new ItemOptions object with combined selection groups
                 var itemOptions = new ItemOptions
                 {
-                    SelectionGroups = itemSelectionGroups,
-                    CategorySelectionGroups = categorySelectionGroups
+                    SelectionGroups = combinedGroups,
+                    CategorySelectionGroups = new List<SelectionGroupWithOptions>() // Empty list since we combined everything
                 };
 
                 _logger.LogInformation("Successfully retrieved options for item: {Item}", item.Name);

@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace RestaurantApi.Models
 {
-    [Table("postcode_minimum_orders")]
+    [Table("PostcodeMinimumOrders")]
     public class PostcodeMinimumOrder
     {
         [Key]
@@ -11,14 +11,11 @@ namespace RestaurantApi.Models
         public int Id { get; set; }
         
         [Required]
-        [Column("postcode")]
+        [Column("Postcode")]
         public string Postcode { get; set; }
         
         [Required]
-        [Column("minimum_order_value")]
+        [Column("MinimumOrderValue")]
         public decimal MinimumOrderValue { get; set; }
-
-        // Navigation property
-        public virtual Postcode? PostcodeInfo { get; set; }
     }
 } 

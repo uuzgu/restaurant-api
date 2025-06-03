@@ -134,7 +134,7 @@ namespace RestaurantApi.Data
             // Configure CustomerOrderInfo entity
             modelBuilder.Entity<CustomerOrderInfo>(entity =>
             {
-                entity.ToTable("customer_order_info");
+                entity.ToTable("customerOrder_info");
                 entity.HasKey(e => e.Id).HasName("id");
                 entity.Property(e => e.FirstName).HasColumnName("first_name").IsRequired();
                 entity.Property(e => e.LastName).HasColumnName("last_name").IsRequired();
@@ -282,11 +282,6 @@ namespace RestaurantApi.Data
                     .HasForeignKey(e => e.PostcodeId)
                     .OnDelete(DeleteBehavior.Restrict);
 
-                entity.HasOne(e => e.CustomerInfo)
-                    .WithMany(c => c.DeliveryAddresses)
-                    .HasForeignKey("customer_info_id")
-                    .OnDelete(DeleteBehavior.Restrict);
-
                 entity.HasOne(e => e.Order)
                     .WithOne(o => o.DeliveryAddress)
                     .HasForeignKey<Order>("delivery_address_id")
@@ -296,15 +291,10 @@ namespace RestaurantApi.Data
             // Configure PostcodeMinimumOrder entity
             modelBuilder.Entity<PostcodeMinimumOrder>(entity =>
             {
-                entity.ToTable("postcode_minimum_orders");
+                entity.ToTable("PostcodeMinimumOrders");
                 entity.HasKey(e => e.Id).HasName("id");
-                entity.Property(e => e.Postcode).HasColumnName("postcode").IsRequired();
-                entity.Property(e => e.MinimumOrderValue).HasColumnName("minimum_order_value").IsRequired().HasColumnType("decimal(18,2)");
-
-                entity.HasOne(e => e.PostcodeInfo)
-                    .WithOne(p => p.MinimumOrder)
-                    .HasForeignKey<Postcode>("minimum_order_id")
-                    .OnDelete(DeleteBehavior.Restrict);
+                entity.Property(e => e.Postcode).HasColumnName("Postcode").IsRequired();
+                entity.Property(e => e.MinimumOrderValue).HasColumnName("MinimumOrderValue").IsRequired().HasColumnType("decimal(18,2)");
             });
 
             modelBuilder.Entity<SelectionGroup>()

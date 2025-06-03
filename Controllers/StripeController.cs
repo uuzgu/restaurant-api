@@ -143,7 +143,7 @@ namespace RestaurantApi.Controllers
                 var service = new SessionService();
                 var session = await service.CreateAsync(options);
 
-                return Ok(new { sessionId = session.Id });
+                return Ok(new { sessionId = session.Id, url = session.Url });
             }
             catch (Exception ex)
             {

@@ -20,6 +20,5 @@ namespace RestaurantApi.Models
 
         // Navigation properties
         public virtual ICollection<DeliveryAddress> DeliveryAddresses { get; set; } = new List<DeliveryAddress>();
-        public virtual PostcodeMinimumOrder? MinimumOrder { get; set; }
     }
 } 

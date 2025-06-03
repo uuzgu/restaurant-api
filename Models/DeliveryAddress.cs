@@ -36,7 +36,6 @@ namespace RestaurantApi.Models
         // Navigation properties
         [ForeignKey("PostcodeId")]
         public virtual Postcode Postcode { get; set; } = null!;
-        public virtual CustomerOrderInfo? CustomerInfo { get; set; }
         public virtual Order? Order { get; set; }
     }
 } 

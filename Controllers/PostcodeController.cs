@@ -39,5 +39,38 @@ namespace RestaurantApi.Controllers
                 .ToListAsync();
             return addresses;
         }
+
+        // Debug endpoint to check database structure
+        [HttpGet("debug")]
+        public async Task<IActionResult> DebugDatabase()
+        {
+            try
+            {
+                // First, get all tables in the database
+                var tables = await _context.Database.SqlQueryRaw<string>(
+                    "SELECT name FROM sqlite_master WHERE type='table'"
+                ).ToListAsync();
+
+                // Then, for each table, get its structure
+                var tableStructures = new Dictionary<string, object>();
+                foreach (var table in tables)
+                {
+                    var columns = await _context.Database.SqlQueryRaw<string>(
+                        $"PRAGMA table_info({table})"
+                    ).ToListAsync();
+                    tableStructures[table] = columns;
+                }
+
+                return Ok(new
+                {
+                    Tables = tables,
+                    TableStructures = tableStructures
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Error = ex.Message, StackTrace = ex.StackTrace });
+            }
+        }
     }
 } 

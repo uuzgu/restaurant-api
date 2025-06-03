@@ -152,6 +152,7 @@ namespace RestaurantApi.Controllers
         [Route("create-cash-order")]
         public async Task<IActionResult> CreateCashOrder([FromBody] CreateCashOrderRequest request)
         {
+            using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
                 _logger.LogInformation("Received cash order request: {@Request}", request);
@@ -159,6 +160,23 @@ namespace RestaurantApi.Controllers
                 if (request.Items == null || !request.Items.Any())
                 {
                     return BadRequest("No items in the order");
+                }
+
+                // Validate delivery information if it's a delivery order
+                if (request.OrderMethod.ToLower() == "delivery")
+                {
+                    if (string.IsNullOrEmpty(request.CustomerInfo.PostalCode))
+                    {
+                        return BadRequest(new { Error = "Postal code is required for delivery orders" });
+                    }
+                    if (string.IsNullOrEmpty(request.CustomerInfo.Street))
+                    {
+                        return BadRequest(new { Error = "Street address is required for delivery orders" });
+                    }
+                    if (string.IsNullOrEmpty(request.CustomerInfo.House))
+                    {
+                        return BadRequest(new { Error = "House number is required for delivery orders" });
+                    }
                 }
 
                 // Create customer info
@@ -175,6 +193,7 @@ namespace RestaurantApi.Controllers
                 await _context.SaveChangesAsync();
 
                 // Create delivery address if needed
+                DeliveryAddress? deliveryAddress = null;
                 if (request.OrderMethod.ToLower() == "delivery" && !string.IsNullOrEmpty(request.CustomerInfo.PostalCode))
                 {
                     var postcode = await _context.Postcodes
@@ -182,10 +201,11 @@ namespace RestaurantApi.Controllers
 
                     if (postcode == null)
                     {
+                        await transaction.RollbackAsync();
                         return BadRequest(new { Error = "Invalid postal code" });
                     }
 
-                    var deliveryAddress = new DeliveryAddress
+                    deliveryAddress = new DeliveryAddress
                     {
                         PostcodeId = postcode.Id,
                         Street = request.CustomerInfo.Street ?? string.Empty,
@@ -209,6 +229,7 @@ namespace RestaurantApi.Controllers
                     OrderMethod = request.OrderMethod,
                     SpecialNotes = request.SpecialNotes,
                     CustomerInfo = customerInfo,
+                    DeliveryAddress = deliveryAddress,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 };
@@ -236,12 +257,37 @@ namespace RestaurantApi.Controllers
                 }
                 await _context.SaveChangesAsync();
 
-                return Ok(new { OrderId = order.Id, OrderNumber = order.OrderNumber });
+                await transaction.CommitAsync();
+
+                _logger.LogInformation("Successfully created cash order with ID: {OrderId}", order.Id);
+
+                return Ok(new { 
+                    OrderId = order.Id, 
+                    OrderNumber = order.OrderNumber,
+                    Status = order.Status,
+                    Total = order.Total,
+                    PaymentMethod = order.PaymentMethod,
+                    OrderMethod = order.OrderMethod,
+                    CreatedAt = order.CreatedAt
+                });
             }
             catch (Exception ex)
             {
+                await transaction.RollbackAsync();
                 _logger.LogError(ex, "Error creating cash order");
-                return BadRequest(new { Error = ex.Message });
+                
+                // Log inner exception if it exists
+                if (ex.InnerException != null)
+                {
+                    _logger.LogError("Inner exception: {InnerException}", ex.InnerException.Message);
+                    _logger.LogError("Inner exception stack trace: {StackTrace}", ex.InnerException.StackTrace);
+                }
+                
+                return StatusCode(500, new { 
+                    Error = "An error occurred while creating the order", 
+                    Details = ex.Message,
+                    InnerException = ex.InnerException?.Message
+                });
             }
         }
 

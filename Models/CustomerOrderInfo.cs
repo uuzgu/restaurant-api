@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace RestaurantApi.Models
 {
-    [Table("customer_order_info")]
+    [Table("customerOrder_info")]
     public class CustomerOrderInfo
     {
         [Key]
@@ -34,6 +34,5 @@ namespace RestaurantApi.Models
 
         // Navigation properties
         public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
-        public virtual ICollection<DeliveryAddress> DeliveryAddresses { get; set; } = new List<DeliveryAddress>();
     }
 } 
