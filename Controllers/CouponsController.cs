@@ -248,7 +248,25 @@ namespace RestaurantApi.Controllers
                 }
             }
 
-            return Ok(new { IsValid = true });
+            return Ok(new { 
+                IsValid = true,
+                DiscountRatio = coupon.DiscountRatio,
+                Code = coupon.Code,
+                Type = coupon.Type,
+                Schedule = new {
+                    BeginTime = schedule.BeginTime,
+                    EndTime = schedule.EndTime,
+                    ValidDays = new {
+                        Monday = schedule.Monday,
+                        Tuesday = schedule.Tuesday,
+                        Wednesday = schedule.Wednesday,
+                        Thursday = schedule.Thursday,
+                        Friday = schedule.Friday,
+                        Saturday = schedule.Saturday,
+                        Sunday = schedule.Sunday
+                    }
+                }
+            });
         }
 
         // POST: api/Coupons/use
