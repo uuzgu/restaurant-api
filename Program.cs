@@ -19,14 +19,8 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowAll", builder =>
     {
         var allowedOrigins = new[] {
-            "https://restaurant-ui-gules.vercel.app",
-            "https://restaurant-ui.vercel.app",
-            "https://restaurant-ui-git-main-utkus-projects-cabada99.vercel.app",
-            "https://restaurant-42an5hv3m-utkus-projects-cabada99.vercel.app",
-            "https://restaurant-ui-git-main-uuzgu.vercel.app",
-            "https://restaurant-ui-uuzgu.vercel.app",
-            "http://localhost:3000",
-            "https://restaurant-ui-gules.vercel.app"  // Adding the current frontend URL
+            "https://restaurant-ui-gules.vercel.app",  // Current production URL
+            "http://localhost:3000"  // Local development
         };
         
         builder.WithOrigins(allowedOrigins)
