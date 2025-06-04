@@ -25,13 +25,15 @@ builder.Services.AddCors(options =>
             "https://restaurant-42an5hv3m-utkus-projects-cabada99.vercel.app",
             "https://restaurant-ui-git-main-uuzgu.vercel.app",
             "https://restaurant-ui-uuzgu.vercel.app",
-            "http://localhost:3000"
+            "http://localhost:3000",
+            "https://restaurant-ui-gules.vercel.app"  // Adding your exact domain
         };
         
         builder.WithOrigins(allowedOrigins)
             .AllowAnyMethod()
             .AllowAnyHeader()
-            .AllowCredentials();
+            .AllowCredentials()
+            .SetIsOriginAllowed(origin => true);  // Temporarily allow all origins for debugging
     });
 });
 
@@ -99,6 +101,15 @@ app.Use(async (context, next) =>
 
 // Use CORS before other middleware
 app.UseCors("AllowAll");
+
+// Add these headers for debugging
+app.Use(async (context, next) =>
+{
+    context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
+    context.Response.Headers.Append("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    context.Response.Headers.Append("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    await next();
+});
 
 // Configure HTTPS redirection
 app.UseHttpsRedirection();
