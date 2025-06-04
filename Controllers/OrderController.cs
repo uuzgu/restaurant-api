@@ -139,6 +139,17 @@ namespace RestaurantApi.Controllers
                 }
                 await _context.SaveChangesAsync();
 
+                // Log recent orders after creation
+                var recentOrders = await _context.Orders
+                    .Include(o => o.CustomerInfo)
+                    .Include(o => o.OrderDetails)
+                    .OrderByDescending(o => o.Id)
+                    .Take(5)
+                    .ToListAsync();
+
+                _logger.LogInformation("Recent Orders after creation: {Orders}", 
+                    JsonSerializer.Serialize(recentOrders, new JsonSerializerOptions { WriteIndented = true }));
+
                 return Ok(new { OrderId = order.Id, OrderNumber = order.OrderNumber });
             }
             catch (Exception ex)
@@ -258,6 +269,17 @@ namespace RestaurantApi.Controllers
                 await _context.SaveChangesAsync();
 
                 await transaction.CommitAsync();
+
+                // Log recent orders after creation
+                var recentOrders = await _context.Orders
+                    .Include(o => o.CustomerInfo)
+                    .Include(o => o.OrderDetails)
+                    .OrderByDescending(o => o.Id)
+                    .Take(5)
+                    .ToListAsync();
+
+                _logger.LogInformation("Recent Orders after cash order creation: {Orders}", 
+                    JsonSerializer.Serialize(recentOrders, new JsonSerializerOptions { WriteIndented = true }));
 
                 _logger.LogInformation("Successfully created cash order with ID: {OrderId}", order.Id);
 

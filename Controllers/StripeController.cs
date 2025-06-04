@@ -107,6 +107,17 @@ namespace RestaurantApi.Controllers
                 }
                 await _context.SaveChangesAsync();
 
+                // Log recent orders after creation
+                var recentOrders = await _context.Orders
+                    .Include(o => o.CustomerInfo)
+                    .Include(o => o.OrderDetails)
+                    .OrderByDescending(o => o.Id)
+                    .Take(5)
+                    .ToListAsync();
+
+                _logger.LogInformation("Recent Orders after Stripe checkout creation: {Orders}", 
+                    JsonSerializer.Serialize(recentOrders, new JsonSerializerOptions { WriteIndented = true }));
+
                 var frontendUrl = _configuration["FrontendUrl"];
                 if (string.IsNullOrEmpty(frontendUrl))
                 {
@@ -130,8 +141,8 @@ namespace RestaurantApi.Controllers
                         Quantity = item.Quantity,
                     }).ToList(),
                     Mode = "payment",
-                    SuccessUrl = $"{frontendUrl}/payment/success?session_id={{CHECKOUT_SESSION_ID}}&payment_method=stripe",
-                    CancelUrl = $"{frontendUrl}/payment/cancel?session_id={{CHECKOUT_SESSION_ID}}&payment_method=stripe",
+                    SuccessUrl = $"{frontendUrl}/payment/success?session_id={Uri.EscapeDataString("{CHECKOUT_SESSION_ID}")}&payment_method=stripe",
+                    CancelUrl = $"{frontendUrl}/payment/cancel?session_id={Uri.EscapeDataString("{CHECKOUT_SESSION_ID}")}&payment_method=stripe",
                     CustomerEmail = request.CustomerInfo?.Email,
                     Metadata = new Dictionary<string, string>
                     {

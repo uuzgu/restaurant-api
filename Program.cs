@@ -23,6 +23,8 @@ builder.Services.AddCors(options =>
             "https://restaurant-ui.vercel.app",
             "https://restaurant-ui-git-main-utkus-projects-cabada99.vercel.app",
             "https://restaurant-42an5hv3m-utkus-projects-cabada99.vercel.app",
+            "https://restaurant-ui-git-main-uuzgu.vercel.app",
+            "https://restaurant-ui-uuzgu.vercel.app",
             "http://localhost:3000"
         };
         
