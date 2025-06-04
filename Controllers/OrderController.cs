@@ -166,7 +166,8 @@ namespace RestaurantApi.Controllers
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                _logger.LogInformation("Received cash order request: {@Request}", request);
+                _logger.LogInformation("Received cash order request - Total Amount: {TotalAmount}, Order Method: {OrderMethod}, Payment Method: {PaymentMethod}", 
+                    request.TotalAmount, request.OrderMethod, request.PaymentMethod);
                 
                 if (request.Items == null || !request.Items.Any())
                 {
@@ -271,15 +272,38 @@ namespace RestaurantApi.Controllers
                 await transaction.CommitAsync();
 
                 // Log recent orders after creation
-                var recentOrders = await _context.Orders
-                    .Include(o => o.CustomerInfo)
-                    .Include(o => o.OrderDetails)
-                    .OrderByDescending(o => o.Id)
-                    .Take(5)
-                    .ToListAsync();
+                try
+                {
+                    var recentOrders = await _context.Orders
+                        .Include(o => o.CustomerInfo)
+                        .Include(o => o.OrderDetails)
+                        .OrderByDescending(o => o.Id)
+                        .Take(5)
+                        .Select(o => new
+                        {
+                            o.Id,
+                            o.OrderNumber,
+                            o.Status,
+                            o.Total,
+                            o.PaymentMethod,
+                            o.OrderMethod,
+                            CustomerInfo = o.CustomerInfo != null ? new
+                            {
+                                o.CustomerInfo.FirstName,
+                                o.CustomerInfo.LastName,
+                                o.CustomerInfo.Email
+                            } : null,
+                            OrderDetailsCount = o.OrderDetails.Count
+                        })
+                        .ToListAsync();
 
-                _logger.LogInformation("Recent Orders after cash order creation: {Orders}", 
-                    JsonSerializer.Serialize(recentOrders, new JsonSerializerOptions { WriteIndented = true }));
+                    _logger.LogInformation("Recent Orders after cash order creation: {Orders}", 
+                        JsonSerializer.Serialize(recentOrders, new JsonSerializerOptions { WriteIndented = true }));
+                }
+                catch (Exception logEx)
+                {
+                    _logger.LogWarning(logEx, "Error logging recent orders");
+                }
 
                 _logger.LogInformation("Successfully created cash order with ID: {OrderId}", order.Id);
 
