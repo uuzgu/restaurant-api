@@ -82,6 +82,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+// Use CORS before other middleware
+app.UseCors("AllowAll");
+
 // Add security headers
 app.Use(async (context, next) =>
 {
@@ -89,12 +92,9 @@ app.Use(async (context, next) =>
     context.Response.Headers.Append("X-Frame-Options", "DENY");
     context.Response.Headers.Append("X-XSS-Protection", "1; mode=block");
     context.Response.Headers.Append("Referrer-Policy", "strict-origin-when-cross-origin");
-    context.Response.Headers.Append("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';");
+    context.Response.Headers.Append("Content-Security-Policy", "default-src 'self' https://restaurant-api-923e.onrender.com; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';");
     await next();
 });
-
-// Use CORS before other middleware
-app.UseCors("AllowAll");
 
 // Configure HTTPS redirection
 app.UseHttpsRedirection();
