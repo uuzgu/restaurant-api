@@ -94,16 +94,36 @@ namespace RestaurantApi.Controllers
                 // Create order details
                 foreach (var item in request.Items)
                 {
-                    var itemDetails = new ItemOptions
-                    {
-                        SelectionGroups = item.SelectionGroups,
-                        CategorySelectionGroups = item.CategorySelectionGroups
-                    };
+                    var selectedItems = (item.SelectedItems != null)
+                        ? item.SelectedItems.Select(si => new
+                        {
+                            id = si.Id,
+                            name = si.Name,
+                            groupName = si.GroupName,
+                            type = si.Type,
+                            price = si.Price,
+                            quantity = si.Quantity
+                        }).Cast<object>().ToList()
+                        : new List<object>();
 
                     var orderDetail = new OrderDetail
                     {
                         OrderId = order.Id,
-                        ItemDetails = JsonSerializer.Serialize(itemDetails)
+                        ItemDetails = JsonSerializer.Serialize(new
+                        {
+                            id = item.Id,
+                            name = item.Name,
+                            quantity = item.Quantity,
+                            price = item.Price,
+                            note = item.Notes,
+                            selectedItems = selectedItems,
+                            groupOrder = item.GroupOrder ?? new List<string>(),
+                            image = item.Image
+                        }, new JsonSerializerOptions
+                        {
+                            WriteIndented = true,
+                            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                        })
                     };
 
                     _context.OrderDetails.Add(orderDetail);
@@ -147,8 +167,19 @@ namespace RestaurantApi.Controllers
                 var frontendUrl = _configuration["FrontendUrl"];
                 if (string.IsNullOrEmpty(frontendUrl))
                 {
-                    return StatusCode(500, "Frontend URL is not configured");
+                    // Try to get the frontend URL from the request origin
+                    var origin = Request.Headers["Origin"].ToString();
+                    if (!string.IsNullOrEmpty(origin))
+                    {
+                        frontendUrl = origin;
+                    }
+                    else
+                    {
+                        return StatusCode(500, "Frontend URL is not configured and could not be determined from request");
+                    }
                 }
+
+                _logger.LogInformation("Using frontend URL for redirects: {FrontendUrl}", frontendUrl);
 
                 var options = new SessionCreateOptions
                 {
@@ -167,8 +198,8 @@ namespace RestaurantApi.Controllers
                         Quantity = item.Quantity,
                     }).ToList(),
                     Mode = "payment",
-                    SuccessUrl = $"{frontendUrl}/payment/success?session_id={Uri.EscapeDataString("{CHECKOUT_SESSION_ID}")}&payment_method=stripe",
-                    CancelUrl = $"{frontendUrl}/payment/cancel?session_id={Uri.EscapeDataString("{CHECKOUT_SESSION_ID}")}&payment_method=stripe",
+                    SuccessUrl = $"{frontendUrl}/payment/success?session_id={{CHECKOUT_SESSION_ID}}&payment_method=stripe",
+                    CancelUrl = $"{frontendUrl}/payment/cancel?session_id={{CHECKOUT_SESSION_ID}}&payment_method=stripe",
                     CustomerEmail = request.CustomerInfo?.Email,
                     Metadata = new Dictionary<string, string>
                     {

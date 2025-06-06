@@ -7,6 +7,9 @@ using Stripe;
 using System.Text.Json.Serialization;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
+using System.Collections.Generic;
+using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 
 namespace RestaurantApi.Controllers
 {
@@ -122,16 +125,35 @@ namespace RestaurantApi.Controllers
                 // Create order details
                 foreach (var item in request.Items)
                 {
+                    var selectedItems = (item.SelectedItems != null)
+                        ? item.SelectedItems.Select(si => new
+                        {
+                            id = si.Id,
+                            name = si.Name,
+                            groupName = si.GroupName,
+                            type = si.Type,
+                            price = si.Price,
+                            quantity = si.Quantity
+                        }).Cast<object>().ToList()
+                        : new List<object>();
+
                     var orderDetail = new OrderDetail
                     {
                         OrderId = order.Id,
                         ItemDetails = JsonSerializer.Serialize(new
                         {
-                            ItemId = item.Id,
-                            Quantity = item.Quantity,
-                            Price = item.Price,
-                            Notes = item.Notes,
-                            SelectedOptions = item.SelectedOptions
+                            id = item.Id,
+                            name = item.Name,
+                            quantity = item.Quantity,
+                            price = item.Price,
+                            note = item.Notes,
+                            selectedItems = selectedItems,
+                            groupOrder = item.GroupOrder ?? new List<string>(),
+                            image = item.Image
+                        }, new JsonSerializerOptions
+                        {
+                            WriteIndented = true,
+                            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
                         })
                     };
 
@@ -252,16 +274,35 @@ namespace RestaurantApi.Controllers
                 // Create order details
                 foreach (var item in request.Items)
                 {
+                    var selectedItems = (item.SelectedItems != null)
+                        ? item.SelectedItems.Select(si => new
+                        {
+                            id = si.Id,
+                            name = si.Name,
+                            groupName = si.GroupName,
+                            type = si.Type,
+                            price = si.Price,
+                            quantity = si.Quantity
+                        }).Cast<object>().ToList()
+                        : new List<object>();
+
                     var orderDetail = new OrderDetail
                     {
                         OrderId = order.Id,
                         ItemDetails = JsonSerializer.Serialize(new
                         {
-                            ItemId = item.Id,
-                            Quantity = item.Quantity,
-                            Price = item.Price,
-                            Notes = item.Notes,
-                            SelectedOptions = item.SelectedOptions
+                            id = item.Id,
+                            name = item.Name,
+                            quantity = item.Quantity,
+                            price = item.Price,
+                            note = item.Notes,
+                            selectedItems = selectedItems,
+                            groupOrder = item.GroupOrder ?? new List<string>(),
+                            image = item.Image
+                        }, new JsonSerializerOptions
+                        {
+                            WriteIndented = true,
+                            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
                         })
                     };
 
@@ -338,12 +379,13 @@ namespace RestaurantApi.Controllers
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<Order>> GetOrderById(int id)
+        public async Task<IActionResult> GetOrderById(int id)
         {
             try
             {
                 var order = await _context.Orders
                     .Include(o => o.CustomerInfo)
+                    .Include(o => o.DeliveryAddress)
                     .Include(o => o.OrderDetails)
                     .FirstOrDefaultAsync(o => o.Id == id);
 
@@ -352,7 +394,110 @@ namespace RestaurantApi.Controllers
                     return NotFound();
                 }
 
-                return Ok(order);
+                // Deserialize item details for each order detail
+                var items = order.OrderDetails.Select(od =>
+                {
+                    try
+                    {
+                        if (string.IsNullOrEmpty(od.ItemDetails))
+                        {
+                            _logger.LogWarning("Empty ItemDetails for OrderDetail {OrderDetailId}", od.Id);
+                            return null;
+                        }
+
+                        var itemDetails = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(od.ItemDetails);
+                        if (itemDetails == null)
+                        {
+                            _logger.LogWarning("Failed to deserialize ItemDetails for OrderDetail {OrderDetailId}", od.Id);
+                            return null;
+                        }
+
+                        // Extract selectedItems
+                        var selectedItems = new List<object>();
+                        if (itemDetails.TryGetValue("selectedItems", out var siElem) && 
+                            siElem.ValueKind == JsonValueKind.Array)
+                        {
+                            foreach (var si in siElem.EnumerateArray())
+                            {
+                                if (si.ValueKind == JsonValueKind.Object)
+                                {
+                                    var siDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(si.GetRawText());
+                                    if (siDict != null)
+                                    {
+                                        selectedItems.Add(new
+                                        {
+                                            id = siDict.TryGetValue("id", out var siIdElem) ? siIdElem.GetInt32() : 0,
+                                            name = siDict.TryGetValue("name", out var siNameElem) ? siNameElem.GetString() ?? "" : "",
+                                            price = siDict.TryGetValue("price", out var siPriceElem) ? siPriceElem.GetDecimal() : 0,
+                                            quantity = siDict.TryGetValue("quantity", out var siQtyElem) ? siQtyElem.GetInt32() : 1,
+                                            groupName = siDict.TryGetValue("groupName", out var siGroupElem) ? siGroupElem.GetString() : null,
+                                            type = siDict.TryGetValue("type", out var siTypeElem) ? siTypeElem.GetString() : null
+                                        });
+                                    }
+                                }
+                            }
+                        }
+
+                        // Extract groupOrder
+                        var groupOrder = new List<string>();
+                        if (itemDetails.TryGetValue("groupOrder", out var goElem) && 
+                            goElem.ValueKind == JsonValueKind.Array)
+                        {
+                            foreach (var go in goElem.EnumerateArray())
+                            {
+                                if (go.ValueKind == JsonValueKind.String)
+                                {
+                                    groupOrder.Add(go.GetString() ?? "");
+                                }
+                            }
+                        }
+
+                        return new
+                        {
+                            id = itemDetails.TryGetValue("id", out var idElem) ? idElem.GetInt32() : 0,
+                            name = itemDetails.TryGetValue("name", out var nameElem) ? nameElem.GetString() ?? "" : "",
+                            price = itemDetails.TryGetValue("price", out var priceElem) ? priceElem.GetDecimal() : 0,
+                            quantity = itemDetails.TryGetValue("quantity", out var qtyElem) ? qtyElem.GetInt32() : 1,
+                            note = itemDetails.TryGetValue("note", out var noteElem) ? noteElem.GetString() ?? "" : "",
+                            selectedItems = selectedItems,
+                            groupOrder = groupOrder,
+                            image = itemDetails.TryGetValue("image", out var imgElem) ? imgElem.GetString() ?? "" : ""
+                        };
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error deserializing order detail {OrderDetailId}", od.Id);
+                        return null;
+                    }
+                })
+                .Where(item => item != null)
+                .ToList();
+
+                var customerInfo = order.CustomerInfo != null ? new {
+                    firstName = order.CustomerInfo.FirstName,
+                    lastName = order.CustomerInfo.LastName,
+                    email = order.CustomerInfo.Email,
+                    phone = order.CustomerInfo.Phone,
+                    postalCode = order.DeliveryAddress?.PostcodeId,
+                    street = order.DeliveryAddress?.Street,
+                    house = order.DeliveryAddress?.House,
+                    stairs = order.DeliveryAddress?.Stairs,
+                    stick = order.DeliveryAddress?.Stick,
+                    door = order.DeliveryAddress?.Door,
+                    bell = order.DeliveryAddress?.Bell,
+                    specialNotes = order.SpecialNotes
+                } : null;
+
+                return Ok(new {
+                    orderNumber = order.OrderNumber,
+                    status = order.Status,
+                    paymentMethod = order.PaymentMethod,
+                    total = order.Total,
+                    orderMethod = order.OrderMethod,
+                    createdAt = order.CreatedAt,
+                    customerInfo = customerInfo,
+                    items = items
+                });
             }
             catch (Exception ex)
             {
@@ -459,6 +604,10 @@ namespace RestaurantApi.Controllers
         public List<int> SelectedOptions { get; set; } = new();
 
         public List<SelectedItemRequest>? SelectedItems { get; set; }
+
+        public List<string>? GroupOrder { get; set; }
+
+        public string? Image { get; set; }
     }
 
     public class SelectedItemRequest
@@ -470,5 +619,9 @@ namespace RestaurantApi.Controllers
         public int Quantity { get; set; }
 
         public decimal Price { get; set; }
+
+        public string? GroupName { get; set; }
+
+        public string? Type { get; set; }
     }
 } 

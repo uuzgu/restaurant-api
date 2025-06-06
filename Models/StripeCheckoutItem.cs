@@ -17,6 +17,9 @@ namespace RestaurantApi.Models
         [JsonPropertyName("quantity")]
         public int Quantity { get; set; }
 
+        [JsonPropertyName("notes")]
+        public string? Notes { get; set; }
+
         [JsonPropertyName("selectedItems")]
         public List<SelectedItem>? SelectedItems { get; set; }
 
@@ -25,6 +28,12 @@ namespace RestaurantApi.Models
 
         [JsonPropertyName("categorySelectionGroups")]
         public List<SelectionGroupWithOptions>? CategorySelectionGroups { get; set; }
+
+        [JsonPropertyName("groupOrder")]
+        public List<string>? GroupOrder { get; set; }
+
+        [JsonPropertyName("image")]
+        public string? Image { get; set; }
     }
 
     public class SelectedItem
@@ -40,5 +49,11 @@ namespace RestaurantApi.Models
 
         [JsonPropertyName("price")]
         public decimal Price { get; set; }
+
+        [JsonPropertyName("groupName")]
+        public string? GroupName { get; set; }
+
+        [JsonPropertyName("type")]
+        public string? Type { get; set; }
     }
 }
